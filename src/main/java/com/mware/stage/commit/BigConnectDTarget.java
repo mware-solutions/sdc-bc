@@ -69,11 +69,61 @@ public class BigConnectDTarget extends BigConnectTarget {
   public String concept;
 
   @ConfigDef(
+          required = true,
+          type = ConfigDef.Type.STRING,
+          defaultValue = "1",
+          label = "ID Seed",
+          displayPosition = 30,
+          group = "OntologyMapping"
+  )
+  public String idSeed;
+
+  @ConfigDef(
+          required = true,
+          type = ConfigDef.Type.BOOLEAN,
+          defaultValue = "false",
+          label = "Create Relationship",
+          displayPosition = 40,
+          group = "OntologyMapping"
+  )
+  public boolean createRelationship;
+
+  @ConfigDef(
+          required = true,
+          type = ConfigDef.Type.STRING,
+          defaultValue = "hasEntity",
+          label = "Relationship Name",
+          displayPosition = 50,
+          group = "OntologyMapping"
+  )
+  public String relationshipName;
+
+  @ConfigDef(
+          required = true,
+          type = ConfigDef.Type.STRING,
+          defaultValue = "1",
+          label = "Relationship End ID Seed",
+          displayPosition = 60,
+          group = "OntologyMapping"
+  )
+  public String relIdSeed;
+
+  @ConfigDef(
+          required = true,
+          type = ConfigDef.Type.BOOLEAN,
+          defaultValue = "true",
+          label = "Relationship Source",
+          displayPosition = 70,
+          group = "OntologyMapping"
+  )
+  public boolean relSource;
+
+  @ConfigDef(
       required = true,
       type = ConfigDef.Type.MAP,
       defaultValue = "",
       label = "Field Mapping",
-      displayPosition = 30,
+      displayPosition = 80,
       group = "OntologyMapping"
   )
   public Map<String, String> mapping;
@@ -88,6 +138,26 @@ public class BigConnectDTarget extends BigConnectTarget {
 
   public String getConcept() {
     return concept;
+  }
+
+  public String getIdSeed() {
+    return idSeed;
+  }
+
+  public boolean isCreateRelationship() {
+    return createRelationship;
+  }
+
+  public String getRelationshipName() {
+    return relationshipName;
+  }
+
+  public String getRelIdSeed() {
+    return relIdSeed;
+  }
+
+  public boolean isRelSource() {
+    return relSource;
   }
 
   public Map<String, String> getMapping() {
