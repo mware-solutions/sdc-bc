@@ -17,38 +17,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mware.stage.processor.sample;
+package com.mware.stage.origin.python;
 
-import com.streamsets.pipeline.api.Field;
 import com.streamsets.pipeline.api.Record;
-import com.streamsets.pipeline.api.StageException;
-import com.streamsets.pipeline.sdk.ProcessorRunner;
-import com.streamsets.pipeline.sdk.RecordCreator;
+import com.streamsets.pipeline.sdk.SourceRunner;
 import com.streamsets.pipeline.sdk.StageRunner;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.List;
 
-public class TestSampleProcessor {
+public class TestPythonSource {
+  private static final int MAX_BATCH_SIZE = 5;
+
   @Test
-  @SuppressWarnings("unchecked")
-  public void testProcessor() throws StageException {
-    ProcessorRunner runner = new ProcessorRunner.Builder(SampleDProcessor.class)
+  public void testOrigin() throws Exception {
+    SourceRunner runner = new SourceRunner.Builder(PythonExecutorDSource.class)
         .addConfiguration("config", "value")
-        .addOutputLane("output")
+        .addOutputLane("lane")
         .build();
 
-    runner.runInit();
-
     try {
-      Record record = RecordCreator.create();
-      record.set(Field.create(true));
-      StageRunner.Output output = runner.runProcess(Arrays.asList(record));
-      Assert.assertEquals(1, output.getRecords().get("output").size());
-      Assert.assertEquals(true, output.getRecords().get("output").get(0).get().getValueAsBoolean());
+      runner.runInit();
+
+      final String lastSourceOffset = null;
+      StageRunner.Output output = runner.runProduce(lastSourceOffset, MAX_BATCH_SIZE);
+      Assert.assertEquals("5", output.getNewOffset());
+      List<Record> records = output.getRecords().get("lane");
+      Assert.assertEquals(5, records.size());
+      Assert.assertTrue(records.get(0).has("/fieldName"));
+      Assert.assertEquals("Some Value", records.get(0).get("/fieldName").getValueAsString());
+
     } finally {
       runner.runDestroy();
     }
   }
+
 }

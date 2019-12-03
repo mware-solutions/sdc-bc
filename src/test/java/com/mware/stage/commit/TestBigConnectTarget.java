@@ -29,7 +29,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-public class TestSampleTarget {
+public class TestBigConnectTarget {
   @Test
   public void testWriteSingleRecord() throws Exception {
     TargetRunner runner = new TargetRunner.Builder(BigConnectDTarget.class)
