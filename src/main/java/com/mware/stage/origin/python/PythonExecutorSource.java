@@ -7,11 +7,14 @@ import com.streamsets.pipeline.api.BatchMaker;
 import com.streamsets.pipeline.api.Record;
 import com.streamsets.pipeline.api.StageException;
 import com.streamsets.pipeline.api.base.BaseSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.UUID;
 
 public abstract class PythonExecutorSource extends BaseSource {
+  private static final Logger LOG = LoggerFactory.getLogger(PythonExecutorSource.class);
 
   public abstract String getScriptPath();
   public abstract List<String> getParameters();
@@ -47,7 +50,8 @@ public abstract class PythonExecutorSource extends BaseSource {
       return "no-more-data";
     }
 
-    runner.runWithCallback(new ResponseAction() {
+    LOG.info("Executing python script from location: " + getScriptPath());
+    Exception e = runner.runWithCallback(new ResponseAction() {
         @Override
         public void execute(int index, String responseLine) {
           Record record = getContext().createRecord("py-src-" + uuid + "::" + index);
@@ -55,6 +59,9 @@ public abstract class PythonExecutorSource extends BaseSource {
           batchMaker.addRecord(record);
         }
     });
+    if (e instanceof StageException) {
+      throw (StageException)e;
+    }
 
     return String.valueOf("no-more-data");
   }

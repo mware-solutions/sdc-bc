@@ -33,7 +33,6 @@ public abstract class PythonExecutorProcessor extends SingleLaneRecordProcessor 
     List<ConfigIssue> issues = super.init();
 
     runner = new PythonRunnable(getScriptPath());
-    uuid = UUID.randomUUID().toString();
 
     // If issues is not empty, the UI will inform the user of each configuration issue in the list.
     return issues;
@@ -52,13 +51,14 @@ public abstract class PythonExecutorProcessor extends SingleLaneRecordProcessor 
     if (!StringUtils.isEmpty(getParamField()) && !record.has(getParamField())) {
       throw new OnRecordErrorException(Errors.BC_01, record, "Parameter field: " + getParamField() + " was set but not found in this record.");
     }
+    uuid = UUID.randomUUID().toString();
     if (!StringUtils.isEmpty(getParamField())) {
       final List<String> params = Arrays.asList(
               record.get(getParamField()).getValueAsString().split(","));
       runner.setParameters(params);
     }
 
-    runner.runWithCallback(new ResponseAction() {
+    Exception e = runner.runWithCallback(new ResponseAction() {
       @Override
       public void execute(int index, String responseLine) {
         Record record = getContext().createRecord("py-proc-" + uuid + "::" + index);
@@ -66,6 +66,9 @@ public abstract class PythonExecutorProcessor extends SingleLaneRecordProcessor 
         batchMaker.addRecord(record);
       }
     });
+    if (e instanceof StageException) {
+      throw (StageException)e;
+    }
   }
 
 }

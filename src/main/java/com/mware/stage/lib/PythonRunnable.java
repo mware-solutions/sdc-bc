@@ -1,14 +1,19 @@
 package com.mware.stage.lib;
 
-import java.io.BufferedReader;
+import com.streamsets.pipeline.api.StageException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.List;
 
-public class PythonRunnable implements Runnable {
+public class PythonRunnable implements Runnable, ExceptionCatcher {
+    private static final Logger LOG = LoggerFactory.getLogger(PythonRunnable.class);
+
     private Runtime runtime;
     private Process process;
+    private Exception ex;
 
     private String scriptPath;
     private List<String> parameters;
@@ -19,30 +24,47 @@ public class PythonRunnable implements Runnable {
         runtime = Runtime.getRuntime();
     }
 
-    public void runWithCallback(ResponseAction callback) {
+    public Exception runWithCallback(ResponseAction callback) {
         this.action = callback;
         this.run();
+        return this.ex;
     }
 
     @Override
     public void run() {
         try {
             process = runtime.exec(buildCommand());
-            processResponse(process.getInputStream());
+
+            processErrorsAsync(process.getErrorStream());
+            processResponseAsync(process.getInputStream());
+
+            int exitVal = process.waitFor();
+            LOG.info("Python process exited with value: " + exitVal);
         } catch(IOException e) {
+            e.printStackTrace();
+        } catch(InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    private void processResponse(InputStream is) throws IOException {
-        BufferedReader bfr = new BufferedReader(new InputStreamReader(is));
-        String line = "";
-        int idx = 0;
-        while ((line = bfr.readLine()) != null) {
-            if (action != null) {
-                action.execute(idx++, line);
-            }
-        }
+    private void processErrorsAsync(InputStream is) {
+        StreamConsumer errorConsumer = new StreamConsumer(is,
+                StreamConsumer.StreamType.ERROR,
+                new ResponseAction() {
+                    @Override
+                    public void execute(int index, String responseLine) throws StageException {
+                        throw new StageException(Errors.BC_02, responseLine);
+                    }
+                },
+                StreamConsumer.ActionType.END, this);
+        errorConsumer.start();
+    }
+
+    private void processResponseAsync(InputStream is) {
+        StreamConsumer responseConsumer
+                = new StreamConsumer(is, StreamConsumer.StreamType.OUTPUT, action,
+                                    StreamConsumer.ActionType.INLINE, this);
+        responseConsumer.start();
     }
 
     private String[] buildCommand() {
@@ -74,5 +96,10 @@ public class PythonRunnable implements Runnable {
 
     public void setParameters(List<String> parameters) {
         this.parameters = parameters;
+    }
+
+    @Override
+    public void handleException(Exception e) {
+        this.ex = e;
     }
 }
