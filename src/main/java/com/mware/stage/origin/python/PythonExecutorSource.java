@@ -47,6 +47,7 @@ public abstract class PythonExecutorSource extends BaseSource {
   @Override
   public String produce(String lastSourceOffset, int maxBatchSize, final BatchMaker batchMaker) throws StageException {
     if ("no-more-data".equals(lastSourceOffset)) {
+      LOG.debug("Python executor source idles with message: no-more-data :: max-batch-size=" + maxBatchSize);
       return "no-more-data";
     }
 
@@ -59,7 +60,7 @@ public abstract class PythonExecutorSource extends BaseSource {
           batchMaker.addRecord(record);
         }
     });
-    if (e instanceof StageException) {
+    if (e != null && e instanceof StageException) {
       throw (StageException)e;
     }
 

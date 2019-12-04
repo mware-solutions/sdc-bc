@@ -66,7 +66,7 @@ public abstract class PythonExecutorProcessor extends SingleLaneRecordProcessor 
         batchMaker.addRecord(record);
       }
     });
-    if (e instanceof StageException) {
+    if (e != null && e instanceof StageException) {
       throw (StageException)e;
     }
   }

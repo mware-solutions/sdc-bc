@@ -1,6 +1,7 @@
 package com.mware.stage.lib;
 
 import com.streamsets.pipeline.api.StageException;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +54,9 @@ public class PythonRunnable implements Runnable, ExceptionCatcher {
                 new ResponseAction() {
                     @Override
                     public void execute(int index, String responseLine) throws StageException {
-                        throw new StageException(Errors.BC_02, responseLine);
+                        if (!StringUtils.isEmpty(responseLine)) {
+                            throw new StageException(Errors.BC_02, responseLine);
+                        }
                     }
                 },
                 StreamConsumer.ActionType.END, this);
@@ -74,7 +77,9 @@ public class PythonRunnable implements Runnable, ExceptionCatcher {
 
         int numParams = 2;
         if (getParameters() != null && !getParameters().isEmpty()) {
-            numParams += getParameters().size();
+            for (String param : getParameters()) {
+                numParams += param.split(" ").length;
+            }
         }
         final String[] cmd = new String[numParams];
         cmd[0] = "python";
@@ -82,8 +87,13 @@ public class PythonRunnable implements Runnable, ExceptionCatcher {
 
         // Add script params
         if (getParameters() != null) {
+            int idx = 0;
             for (int i = 0; i < getParameters().size(); i++) {
-                cmd[2 + i] = getParameters().get(i);
+                final String[] subParams = getParameters().get(i).split(" ");
+                for (int j =0 ; j < subParams.length; j++) {
+                    cmd[2 + idx] = subParams[j];
+                    idx++;
+                }
             }
         }
 
