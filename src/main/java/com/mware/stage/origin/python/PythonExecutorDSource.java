@@ -51,6 +51,16 @@ public class PythonExecutorDSource extends PythonExecutorSource {
   )
   public String outputSeparator;
 
+  @ConfigDef(
+      required = true,
+      type = ConfigDef.Type.NUMBER,
+      defaultValue = "1",
+      label = "Thread Count",
+      displayPosition = 40,
+      group = "ExecutorConfig"
+  )
+  public int threadCount;
+
   @Override
   public List<String> getParameters() {
     return parameters;
@@ -65,5 +75,10 @@ public class PythonExecutorDSource extends PythonExecutorSource {
   @Override
   public String getOutputSeparator() {
     return outputSeparator;
+  }
+
+  @Override
+  public int getNumberOfThreads() {
+    return threadCount;
   }
 }
