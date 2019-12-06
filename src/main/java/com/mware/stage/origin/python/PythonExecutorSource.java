@@ -49,6 +49,9 @@ public abstract class PythonExecutorSource extends BasePushSource {
   public void destroy() {
     // Clean up any open resources.
     super.destroy();
+    if (runner != null) {
+      runner.destroy();
+    }
   }
 
   /** {@inheritDoc} */
@@ -70,13 +73,15 @@ public abstract class PythonExecutorSource extends BasePushSource {
       throw (StageException)e;
     }
 
-    // Wait for execution end
-    for(Future<Runnable> f : futures) {
-      try {
-        f.get();
-      } catch (InterruptedException | ExecutionException ex) {
-        LOG.error("Record generation threads have been interrupted", ex.getMessage());
-      }
+    if (e == null || !(e instanceof InterruptedException)) {
+        // Wait for execution end
+        for (Future<Runnable> f : futures) {
+          try {
+            f.get();
+          } catch (InterruptedException | ExecutionException ex) {
+            LOG.error("Record generation threads have been interrupted", ex.getMessage());
+          }
+        }
     }
     executor.shutdownNow();
   }

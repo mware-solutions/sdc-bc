@@ -43,6 +43,9 @@ public abstract class PythonExecutorProcessor extends SingleLaneRecordProcessor 
   public void destroy() {
     // Clean up any open resources.
     super.destroy();
+    if (runner != null) {
+      runner.destroy();
+    }
   }
 
   /** {@inheritDoc} */

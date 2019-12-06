@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.util.List;
 
 public class PythonRunnable implements Runnable, ExceptionCatcher {
@@ -42,9 +43,12 @@ public class PythonRunnable implements Runnable, ExceptionCatcher {
             int exitVal = process.waitFor();
             LOG.info("Python process exited with value: " + exitVal);
         } catch(IOException e) {
-            e.printStackTrace();
+            LOG.error("Python process IOE: " + e.getMessage());
         } catch(InterruptedException e) {
-            e.printStackTrace();
+            final String msg = "Python process was interrupted";
+            LOG.error(msg);
+            this.ex = new InterruptedException(msg);
+            this.destroy();
         }
     }
 
@@ -111,5 +115,41 @@ public class PythonRunnable implements Runnable, ExceptionCatcher {
     @Override
     public void handleException(Exception e) {
         this.ex = e;
+    }
+
+    public void destroy() {
+        if (process != null) {
+            Long pid = unixLikeProcessId(process);
+            if (pid != null) {
+                killProcess(pid.longValue());
+            }
+            process.destroy();
+        }
+    }
+
+    private Long unixLikeProcessId(Process process) {
+        Class<?> clazz = process.getClass();
+        try {
+            if (clazz.getName().equals("java.lang.UNIXProcess")) {
+                Field pidField = clazz.getDeclaredField("pid");
+                pidField.setAccessible(true);
+                Object value = pidField.get(process);
+                if (value instanceof Integer) {
+                    LOG.info("Detected pid: ", value);
+                    return ((Integer) value).longValue();
+                }
+            }
+        } catch (SecurityException | IllegalAccessException | IllegalArgumentException | NoSuchFieldException sx) {
+            sx.printStackTrace();
+        }
+        return null;
+    }
+
+    public void killProcess(long pid) {
+        try {
+            runtime.exec("sh -c kill -15 " + pid);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

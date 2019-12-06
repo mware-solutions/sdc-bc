@@ -34,7 +34,7 @@ public class StreamConsumer extends Thread {
             int idx = 0;
             StringBuffer sb = new StringBuffer();
             while ((line = br.readLine()) != null) {
-                LOG.info("Process output - " + type.name() + ": " + line);
+                LOG.trace("Process output - " + type.name() + ": " + line);
                 sb.append(line);
                 sb.append("\n");
                 if (action != null && actionType == ActionType.INLINE) {
@@ -45,7 +45,7 @@ public class StreamConsumer extends Thread {
                 action.execute(-1, sb.toString());
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.error("Source process has been stopped");
         } catch (StageException e) {
             this.exceptionCatcher.handleException(e);
             e.printStackTrace();
