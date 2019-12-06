@@ -38,11 +38,24 @@ public class PythonExecutorDProcessor extends PythonExecutorProcessor {
   public String paramField;
 
   @ConfigDef(
+      required = true,
+      type = ConfigDef.Type.BOOLEAN,
+      defaultValue = "true",
+      label = "JSON output",
+      displayPosition = 30,
+      group = "ExecutorConfig"
+  )
+  public boolean json;
+
+  @ConfigDef(
       required = false,
       type = ConfigDef.Type.STRING,
       defaultValue = ",",
       label = "Output separator",
-      displayPosition = 30,
+      description = "Output separator (only if output is not JSON)",
+      dependsOn = "json",
+      triggeredByValue = "false",
+      displayPosition = 40,
       group = "ExecutorConfig"
   )
   public String outputSeparator;
@@ -56,6 +69,11 @@ public class PythonExecutorDProcessor extends PythonExecutorProcessor {
   @Override
   public String getParamField() {
     return paramField;
+  }
+
+  @Override
+  public boolean isJson() {
+    return json;
   }
 
   @Override

@@ -42,11 +42,24 @@ public class PythonExecutorDSource extends PythonExecutorSource {
   public List<String> parameters;
 
   @ConfigDef(
+      required = true,
+      type = ConfigDef.Type.BOOLEAN,
+      defaultValue = "true",
+      label = "JSON output",
+      displayPosition = 30,
+      group = "ExecutorConfig"
+  )
+  public boolean json;
+
+  @ConfigDef(
       required = false,
       type = ConfigDef.Type.STRING,
       defaultValue = ",",
       label = "Output separator",
-      displayPosition = 30,
+      description = "Output separator (only if output is not JSON)",
+      dependsOn = "json",
+      triggeredByValue = "false",
+      displayPosition = 40,
       group = "ExecutorConfig"
   )
   public String outputSeparator;
@@ -56,7 +69,7 @@ public class PythonExecutorDSource extends PythonExecutorSource {
       type = ConfigDef.Type.NUMBER,
       defaultValue = "1",
       label = "Thread Count",
-      displayPosition = 40,
+      displayPosition = 50,
       group = "ExecutorConfig"
   )
   public int threadCount;
@@ -70,6 +83,11 @@ public class PythonExecutorDSource extends PythonExecutorSource {
   @Override
   public String getScriptPath() {
     return scriptPath;
+  }
+
+  @Override
+  public boolean isJson() {
+    return json;
   }
 
   @Override

@@ -21,6 +21,7 @@ public abstract class PythonExecutorProcessor extends SingleLaneRecordProcessor 
    */
   public abstract String getScriptPath();
   public abstract String getParamField();
+  public abstract boolean isJson();
   public abstract String getOutputSeparator();
 
   private PythonRunnable runner;
@@ -65,7 +66,7 @@ public abstract class PythonExecutorProcessor extends SingleLaneRecordProcessor 
       @Override
       public void execute(int index, String responseLine) {
         Record record = getContext().createRecord("py-proc-" + uuid + "::" + index);
-        Utils.stringToMapRecord(record, responseLine, getOutputSeparator());
+        Utils.stringToMapRecord(record, responseLine, isJson(), getOutputSeparator());
         batchMaker.addRecord(record);
       }
     });

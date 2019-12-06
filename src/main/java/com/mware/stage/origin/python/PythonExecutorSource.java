@@ -25,6 +25,7 @@ public abstract class PythonExecutorSource extends BasePushSource {
 
   public abstract String getScriptPath();
   public abstract List<String> getParameters();
+  public abstract boolean isJson();
   public abstract String getOutputSeparator();
   public abstract int getNumberOfThreads();
 
@@ -101,7 +102,7 @@ public abstract class PythonExecutorSource extends BasePushSource {
     public void run() {
       BatchContext batchContext = context.startBatch();
       Record record = context.createRecord("py-src-" + uuid + "::" + index);
-      Utils.stringToMapRecord(record, responseLine, getOutputSeparator());
+      Utils.stringToMapRecord(record, responseLine, isJson(), getOutputSeparator());
       batchContext.getBatchMaker().addRecord(record);
       context.processBatch(batchContext);
     }
