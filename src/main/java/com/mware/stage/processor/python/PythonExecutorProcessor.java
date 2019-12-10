@@ -9,12 +9,15 @@ import com.streamsets.pipeline.api.StageException;
 import com.streamsets.pipeline.api.base.OnRecordErrorException;
 import com.streamsets.pipeline.api.base.SingleLaneRecordProcessor;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
 public abstract class PythonExecutorProcessor extends SingleLaneRecordProcessor {
+  private static final Logger LOG = LoggerFactory.getLogger(PythonExecutorProcessor.class);
 
   /**
    * Gives access to the UI configuration of the stage provided by the {@link PythonExecutorDProcessor} class.
@@ -55,6 +58,10 @@ public abstract class PythonExecutorProcessor extends SingleLaneRecordProcessor 
     if (!StringUtils.isEmpty(getParamField()) && !record.has(getParamField())) {
       throw new OnRecordErrorException(Errors.BC_01, record, "Parameter field: " + getParamField() + " was set but not found in this record.");
     }
+    if (getContext().isPreview() || getContext().isStopped()) {
+      return;
+    }
+
     uuid = UUID.randomUUID().toString();
     if (!StringUtils.isEmpty(getParamField())) {
       final List<String> params = Arrays.asList(
@@ -65,9 +72,11 @@ public abstract class PythonExecutorProcessor extends SingleLaneRecordProcessor 
     Exception e = runner.runWithCallback(new ResponseAction() {
       @Override
       public void execute(int index, String responseLine) {
-        Record record = getContext().createRecord("py-proc-" + uuid + "::" + index);
+        final String rid = "py-proc-" + uuid + "::" + index;
+        Record record = getContext().createRecord(rid);
         Utils.stringToMapRecord(record, responseLine, isJson(), getOutputSeparator());
         batchMaker.addRecord(record);
+        LOG.info("Produced record with id: " + rid);
       }
     });
     if (e != null && e instanceof StageException) {

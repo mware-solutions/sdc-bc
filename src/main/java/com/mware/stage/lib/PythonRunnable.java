@@ -16,6 +16,8 @@ public class PythonRunnable implements Runnable, ExceptionCatcher {
     private Runtime runtime;
     private Process process;
     private Exception ex;
+    private StreamConsumer errorConsumer;
+    private StreamConsumer responseConsumer;
 
     private String scriptPath;
     private List<String> parameters;
@@ -48,12 +50,13 @@ public class PythonRunnable implements Runnable, ExceptionCatcher {
             final String msg = "Python process was interrupted";
             LOG.error(msg);
             this.ex = new InterruptedException(msg);
+        } finally {
             this.destroy();
         }
     }
 
     private void processErrorsAsync(InputStream is) {
-        StreamConsumer errorConsumer = new StreamConsumer(is,
+        errorConsumer = new StreamConsumer(is,
                 StreamConsumer.StreamType.ERROR,
                 new ResponseAction() {
                     @Override
@@ -68,7 +71,7 @@ public class PythonRunnable implements Runnable, ExceptionCatcher {
     }
 
     private void processResponseAsync(InputStream is) {
-        StreamConsumer responseConsumer
+        responseConsumer
                 = new StreamConsumer(is, StreamConsumer.StreamType.OUTPUT, action,
                                     StreamConsumer.ActionType.INLINE, this);
         responseConsumer.start();
@@ -118,7 +121,13 @@ public class PythonRunnable implements Runnable, ExceptionCatcher {
     }
 
     public void destroy() {
-        if (process != null) {
+        if (errorConsumer != null) {
+            errorConsumer.kill();
+        }
+        if (responseConsumer != null) {
+            responseConsumer.kill();
+        }
+        if (process != null) { // Unix only
             Long pid = unixLikeProcessId(process);
             if (pid != null) {
                 killProcess(pid.longValue());

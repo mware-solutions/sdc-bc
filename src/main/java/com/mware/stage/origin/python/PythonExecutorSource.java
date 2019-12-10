@@ -58,6 +58,10 @@ public abstract class PythonExecutorSource extends BasePushSource {
   /** {@inheritDoc} */
   @Override
   public void produce(Map<String, String> offsets, int maxBatchSize) throws StageException {
+    if (getContext().isPreview()) {
+      return;
+    }
+
     final ExecutorService executor = Executors.newFixedThreadPool(getNumberOfThreads());
     final List<Future<Runnable>> futures = new ArrayList<>();
 
@@ -84,27 +88,42 @@ public abstract class PythonExecutorSource extends BasePushSource {
           }
         }
     }
+
     executor.shutdownNow();
   }
 
   class RecordProducer implements Runnable {
+    private final Logger log = LoggerFactory.getLogger(RecordProducer.class);
+
     private int index;
     private String responseLine;
     private PushSource.Context context;
+    private boolean killed;
 
     public RecordProducer(int index, String responseLine, PushSource.Context context) {
         this.index = index;
         this.responseLine = responseLine;
         this.context = context;
+        this.killed = false;
     }
 
     @Override
     public void run() {
+      if (killed) {
+        return;
+      }
+
       BatchContext batchContext = context.startBatch();
-      Record record = context.createRecord("py-src-" + uuid + "::" + index);
+      final String rid = "py-src-" + uuid + "::" + index;
+      Record record = context.createRecord(rid);
       Utils.stringToMapRecord(record, responseLine, isJson(), getOutputSeparator());
       batchContext.getBatchMaker().addRecord(record);
       context.processBatch(batchContext);
+      log.info("Produced record with id: " + rid);
+    }
+
+    public void kill() {
+      this.killed = true;
     }
   }
 }
