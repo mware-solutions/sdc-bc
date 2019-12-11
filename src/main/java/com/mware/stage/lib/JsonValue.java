@@ -1,14 +1,14 @@
 package com.mware.stage.lib;
 
-public class JsonValue {
-    private String value;
+public class JsonValue<T> {
+    private T value;
     private boolean encoded;
 
-    public String getValue() {
+    public T getValue() {
         return value;
     }
 
-    public void setValue(String value) {
+    public void setValue(T value) {
         this.value = value;
     }
 
