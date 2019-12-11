@@ -21,7 +21,6 @@ package com.mware.stage.commit;
 
 import com.mware.core.model.clientapi.dto.VisibilityJson;
 import com.mware.core.model.properties.BcSchema;
-import com.mware.core.model.properties.SchemaProperties;
 import com.mware.core.model.properties.types.PropertyMetadata;
 import com.mware.core.model.properties.types.SingleValueBcProperty;
 import com.mware.core.model.schema.Schema;
@@ -41,7 +40,6 @@ import com.streamsets.pipeline.api.StageException;
 import com.streamsets.pipeline.api.base.BaseTarget;
 import com.streamsets.pipeline.api.base.OnRecordErrorException;
 import com.streamsets.pipeline.api.impl.Utils;
-import org.apache.commons.lang.StringUtils;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
@@ -60,6 +58,7 @@ public abstract class BigConnectTarget extends BaseTarget {
   public abstract String getFieldPath();
   public abstract String getConcept();
   public abstract String getIdSeed();
+  public abstract String getIdFields();
   public abstract boolean isCreateRelationship();
   public abstract String getRelationshipName();
   public abstract String getRelIdSeed();
@@ -239,8 +238,12 @@ public abstract class BigConnectTarget extends BaseTarget {
     } catch (NoSuchAlgorithmException e) {
       e.printStackTrace();
     }
+    final List<String> idFields = Arrays.asList(getIdFields().split(","));
     for (Map.Entry<String, Field> field : fields.entrySet()) {
-        md.update(field.getValue().toString().getBytes());
+        if (getIdFields().equals("*")
+                        || idFields.contains(field.getKey())) {
+            md.update(field.getValue().toString().getBytes());
+        }
     }
     md.update(seed.getBytes());
     byte[] digest = md.digest();

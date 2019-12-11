@@ -80,10 +80,20 @@ public class BigConnectDTarget extends BigConnectTarget {
 
   @ConfigDef(
           required = true,
+          type = ConfigDef.Type.STRING,
+          defaultValue = "*",
+          label = "ID fields",
+          displayPosition = 40,
+          group = "OntologyMapping"
+  )
+  public String idFields;
+
+  @ConfigDef(
+          required = true,
           type = ConfigDef.Type.BOOLEAN,
           defaultValue = "false",
           label = "Create Relationship",
-          displayPosition = 40,
+          displayPosition = 50,
           group = "OntologyMapping"
   )
   public boolean createRelationship;
@@ -93,7 +103,7 @@ public class BigConnectDTarget extends BigConnectTarget {
           type = ConfigDef.Type.STRING,
           defaultValue = "hasEntity",
           label = "Relationship Name",
-          displayPosition = 50,
+          displayPosition = 60,
           group = "OntologyMapping"
   )
   public String relationshipName;
@@ -103,7 +113,7 @@ public class BigConnectDTarget extends BigConnectTarget {
           type = ConfigDef.Type.STRING,
           defaultValue = "1",
           label = "Relationship End ID Seed",
-          displayPosition = 60,
+          displayPosition = 70,
           group = "OntologyMapping"
   )
   public String relIdSeed;
@@ -113,18 +123,18 @@ public class BigConnectDTarget extends BigConnectTarget {
           type = ConfigDef.Type.BOOLEAN,
           defaultValue = "true",
           label = "Relationship Source",
-          displayPosition = 70,
+          displayPosition = 80,
           group = "OntologyMapping"
   )
   public boolean relSource;
 
   @ConfigDef(
-      required = true,
-      type = ConfigDef.Type.MAP,
-      defaultValue = "",
-      label = "Field Mapping",
-      displayPosition = 80,
-      group = "OntologyMapping"
+          required = true,
+          type = ConfigDef.Type.MAP,
+          defaultValue = "",
+          label = "Field Mapping",
+          displayPosition = 90,
+          group = "OntologyMapping"
   )
   public Map<String, String> mapping;
 
@@ -142,6 +152,10 @@ public class BigConnectDTarget extends BigConnectTarget {
 
   public String getIdSeed() {
     return idSeed;
+  }
+
+  public String getIdFields() {
+    return idFields;
   }
 
   public boolean isCreateRelationship() {
