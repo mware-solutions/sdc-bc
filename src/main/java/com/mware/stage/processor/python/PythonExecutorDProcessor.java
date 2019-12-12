@@ -1,5 +1,6 @@
 package com.mware.stage.processor.python;
 
+import com.mware.stage.lib.PythonExecutorOutputStreams;
 import com.mware.stage.origin.python.Groups;
 import com.streamsets.pipeline.api.ConfigDef;
 import com.streamsets.pipeline.api.ConfigGroups;
@@ -11,6 +12,7 @@ import com.streamsets.pipeline.api.StageDef;
     label = "Python Executor [T]",
     description = "",
     icon = "py.png",
+    outputStreams = PythonExecutorOutputStreams.class,
     onlineHelpRefUrl = ""
 )
 @ConfigGroups(Groups.class)
