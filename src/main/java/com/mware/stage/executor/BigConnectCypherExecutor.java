@@ -103,7 +103,7 @@ public class BigConnectCypherExecutor extends BaseExecutor {
                         context.createConfigIssue(
                                 Groups.CONNECTION.name(),
                                 "config.query",
-                                QueryExecErrors.QUERY_EXECUTOR_002,
+                                QueryExecErrors.QUERY_EXECUTOR_001,
                                 e.getMessage()
                         )
                 );
@@ -123,22 +123,25 @@ public class BigConnectCypherExecutor extends BaseExecutor {
                 String _query = queryEval.eval(variables, query, String.class);
                 Map<String, Object> params = new HashMap<>();
                 queryParams.forEach((k, v) -> {
-                    Object _v = record.get(v).getValue();
-                    if (_v instanceof Map) {
-                        Map<String, Object> fieldMap = (Map<String, Object>) _v;
-                        fieldMap.forEach((k1, v1) -> {
-                            if (v1 instanceof Field) {
-                                fieldMap.put(k1, ((Field)v1).getValue());
-                            }
-                        });
+                    if (record.has(v)) {
+                        Object _v = record.get(v).getValue();
+                        if (_v instanceof Map) {
+                            Map<String, Object> fieldMap = (Map<String, Object>) _v;
+                            fieldMap.forEach((k1, v1) -> {
+                                if (v1 instanceof Field) {
+                                    fieldMap.put(k1, ((Field) v1).getValue());
+                                }
+                            });
+                        }
+                        params.put(k, _v);
+                    } else {
+                        LOG.error("Can't find field: "+v);
+                        throw new StageException(QueryExecErrors.QUERY_EXECUTOR_002, v);
+
                     }
-                    params.put(k, _v);
                 });
                 processARecord(session, _query, params, record);
             }
-        } catch (Exception ex) {
-            LOG.error("Can't get connection", ex);
-            throw new StageException(QueryExecErrors.QUERY_EXECUTOR_002, ex.getMessage());
         }
     }
 
