@@ -51,6 +51,11 @@
       <artifactId>search-index</artifactId>
       <version>${bc.version}</version>
     </dependency>
+    <dependency>
+      <groupId>com.mware.bigconnect</groupId>
+      <artifactId>cypher-java-driver</artifactId>
+      <version>${bc.version}</version>
+    </dependency>
 
     <!-- Core StreamSets Dependencies for Stage Libraries -->
     <dependency>
@@ -88,29 +93,39 @@
     </dependency>
   </dependencies>
 
+  <profiles>
+    <profile>
+      <id>tgz</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>dist</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <appendAssemblyId>false</appendAssemblyId>
+                  <attach>false</attach>
+                  <finalName>${project.artifactId}-${project.version}</finalName>
+                  <descriptors>
+                    <descriptor>src/main/assemblies/stage-lib.xml</descriptor>
+                  </descriptors>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
   <build>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>dist</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-              <attach>false</attach>
-              <finalName>${project.artifactId}-${project.version}</finalName>
-              <descriptors>
-                <descriptor>src/main/assemblies/stage-lib.xml</descriptor>
-              </descriptors>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
