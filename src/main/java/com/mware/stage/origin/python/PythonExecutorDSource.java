@@ -1,5 +1,6 @@
 package com.mware.stage.origin.python;
 
+import com.mware.stage.lib.PythonExecutorOutputStreams;
 import com.streamsets.pipeline.api.ConfigDef;
 import com.streamsets.pipeline.api.ConfigGroups;
 import com.streamsets.pipeline.api.ExecutionMode;
@@ -13,6 +14,7 @@ import java.util.List;
     label = "Python Executor [E]",
     description = "",
     icon = "py.png",
+    outputStreams = PythonExecutorOutputStreams.class,
     execution = ExecutionMode.STANDALONE,
     recordsByRef = true,
     onlineHelpRefUrl = ""
@@ -45,7 +47,7 @@ public class PythonExecutorDSource extends PythonExecutorSource {
       required = true,
       type = ConfigDef.Type.BOOLEAN,
       defaultValue = "true",
-      label = "JSON output",
+      label = "Script JSON output",
       displayPosition = 30,
       group = "ExecutorConfig"
   )
@@ -55,7 +57,7 @@ public class PythonExecutorDSource extends PythonExecutorSource {
       required = false,
       type = ConfigDef.Type.STRING,
       defaultValue = ",",
-      label = "Output separator",
+      label = "Script output separator",
       description = "Output separator (only if output is not JSON)",
       dependsOn = "json",
       triggeredByValue = "false",

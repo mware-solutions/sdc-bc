@@ -4,10 +4,11 @@ import com.mware.stage.lib.Errors;
 import com.mware.stage.lib.PythonRunnable;
 import com.mware.stage.lib.ResponseAction;
 import com.mware.stage.lib.Utils;
+import com.streamsets.pipeline.api.BatchMaker;
 import com.streamsets.pipeline.api.Record;
 import com.streamsets.pipeline.api.StageException;
 import com.streamsets.pipeline.api.base.OnRecordErrorException;
-import com.streamsets.pipeline.api.base.SingleLaneRecordProcessor;
+import com.streamsets.pipeline.api.base.RecordProcessor;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-public abstract class PythonExecutorProcessor extends SingleLaneRecordProcessor {
+public abstract class PythonExecutorProcessor extends RecordProcessor {
   private static final Logger LOG = LoggerFactory.getLogger(PythonExecutorProcessor.class);
 
   /**
@@ -54,7 +55,7 @@ public abstract class PythonExecutorProcessor extends SingleLaneRecordProcessor 
 
   /** {@inheritDoc} */
   @Override
-  protected void process(Record record, final SingleLaneBatchMaker batchMaker) throws StageException {
+  protected void process(Record record, BatchMaker batchMaker) throws StageException {
     if (!StringUtils.isEmpty(getParamField()) && !record.has(getParamField())) {
       throw new OnRecordErrorException(Errors.BC_01, record, "Parameter field: " + getParamField() + " was set but not found in this record.");
     }
@@ -75,7 +76,9 @@ public abstract class PythonExecutorProcessor extends SingleLaneRecordProcessor 
         final String rid = "py-proc-" + uuid + "::" + index;
         Record record = getContext().createRecord(rid);
         Utils.stringToMapRecord(record, responseLine, isJson(), getOutputSeparator());
-        batchMaker.addRecord(record);
+        for (int i = 0; i < getContext().getOutputLanes().size(); i++) {
+          batchMaker.addRecord(record, getContext().getOutputLanes().get(i));
+        }
         LOG.info("Produced record with id: " + rid);
       }
     });

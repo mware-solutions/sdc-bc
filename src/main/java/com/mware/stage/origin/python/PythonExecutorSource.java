@@ -117,7 +117,9 @@ public abstract class PythonExecutorSource extends BasePushSource {
       final String rid = "py-src-" + uuid + "::" + index;
       Record record = context.createRecord(rid);
       Utils.stringToMapRecord(record, responseLine, isJson(), getOutputSeparator());
-      batchContext.getBatchMaker().addRecord(record);
+      for (int i = 0; i < getContext().getOutputLanes().size(); i++) {
+        batchContext.getBatchMaker().addRecord(record, getContext().getOutputLanes().get(i));
+      }
       context.processBatch(batchContext);
       log.info("Produced record with id: " + rid);
     }
