@@ -79,16 +79,17 @@ public class Utils {
     private static Field listJsonValue(Gson gson, JsonElement value) throws IllegalArgumentException {
         if (value != null) {
             try {
-                Type type = new TypeToken<JsonValue<List<String>>>(){}.getType();
-                JsonValue<List<String>> stringValue = gson.fromJson(value, type);
+                Type type = new TypeToken<JsonValue<List<Object>>>(){}.getType();
+                JsonValue<List<Object>> stringValue = gson.fromJson(value, type);
                 if(stringValue != null) {
                     List<Field> values = stringValue.getValue().stream()
-                            .map(v -> (v != null) ? Field.create(v) : Field.create(""))
+                            .map(v -> (v != null) ? Field.create(v.toString()) : Field.create(""))
                             .collect(Collectors.toList());
                     return Field.create(values);
                 } else
                     return Field.create(Collections.emptyList());
             } catch (JsonSyntaxException ex) {
+                ex.printStackTrace();
                 throw new IllegalArgumentException();
             }
         }

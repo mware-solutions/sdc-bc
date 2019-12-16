@@ -46,11 +46,14 @@ public class PythonRunnable implements Runnable, ExceptionCatcher {
             LOG.info("Python process exited with value: " + exitVal);
         } catch(IOException e) {
             LOG.error("Python process IOE: " + e.getMessage());
+            this.destroy();
         } catch(InterruptedException e) {
             final String msg = "Python process was interrupted";
             LOG.error(msg);
             this.ex = new InterruptedException(msg);
-        } finally {
+            this.destroy();
+        } catch(Exception e) {
+            LOG.error("Python process generic exception: " + e.getMessage());
             this.destroy();
         }
     }
