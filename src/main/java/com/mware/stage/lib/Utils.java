@@ -89,7 +89,7 @@ public class Utils {
                 } else
                     return Field.create(Collections.emptyList());
             } catch (JsonSyntaxException ex) {
-                ex.printStackTrace();
+//                ex.printStackTrace();
                 throw new IllegalArgumentException();
             }
         }

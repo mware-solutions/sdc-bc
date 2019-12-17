@@ -5,6 +5,7 @@ import com.mware.stage.lib.PythonRunnable;
 import com.mware.stage.lib.ResponseAction;
 import com.mware.stage.lib.Utils;
 import com.streamsets.pipeline.api.BatchMaker;
+import com.streamsets.pipeline.api.ErrorCode;
 import com.streamsets.pipeline.api.Record;
 import com.streamsets.pipeline.api.StageException;
 import com.streamsets.pipeline.api.base.OnRecordErrorException;
@@ -82,10 +83,21 @@ public abstract class PythonExecutorProcessor extends RecordProcessor {
         LOG.info("Produced record with id: " + rid);
       }
     });
+
     if (e != null && e instanceof StageException) {
+      ErrorCode errorCode = Errors.BC_01;
+      Object[] params = ((StageException) e).getParams();
+      if (params != null && params.length > 0) {
+        if (params[0].toString().contains("Profile not public")) {
+          errorCode = Errors.BC_CUST_01;
+        }
+        if (params[0].toString().contains("Needs login")) {
+          errorCode = Errors.BC_CUST_02;
+        }
+      }
       throw new OnRecordErrorException(
               record,
-              Errors.BC_01,
+              errorCode,
               record.getHeader().getSourceId(),
               e.getMessage(),
               e

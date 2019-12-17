@@ -28,6 +28,8 @@ public enum Errors implements ErrorCode {
   BC_00("A configuration is invalid because: {}"),
   BC_01("Specific reason writing record failed: {}"),
   BC_02("Python process error: {}"),
+  BC_CUST_01("Profile not public: {}"),
+  BC_CUST_02("Needs loginr: {}"),
   ;
   private final String msg;
 
