@@ -13,10 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.mware.bigconnect.driver.AuthTokens.basic;
 import static com.mware.bigconnect.driver.Logging.none;
@@ -132,6 +129,13 @@ public class BigConnectCypherExecutor extends BaseExecutor {
                                     fieldMap.put(k1, ((Field) v1).getValue());
                                 }
                             });
+                        } else if (_v instanceof ArrayList) {
+                            List<Field> fieldList = (List<Field>) _v;
+                            List<Object> valueList = new ArrayList<>();
+                            fieldList.forEach((f1) -> {
+                                valueList.add(f1.getValue());
+                            });
+                            _v = valueList;
                         }
                         params.put(k, _v);
                     } else {

@@ -83,8 +83,13 @@ public abstract class PythonExecutorProcessor extends RecordProcessor {
       }
     });
     if (e != null && e instanceof StageException) {
-      e.printStackTrace();
-//      throw (StageException)e;
+      throw new OnRecordErrorException(
+              record,
+              Errors.BC_01,
+              record.getHeader().getSourceId(),
+              e.getMessage(),
+              e
+      );
     }
   }
 
