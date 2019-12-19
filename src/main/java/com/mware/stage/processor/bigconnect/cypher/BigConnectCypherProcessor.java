@@ -1,13 +1,11 @@
 package com.mware.stage.processor.bigconnect.cypher;
 
-import com.mware.bigconnect.driver.*;
-import com.mware.bigconnect.driver.Config;
-import com.mware.bigconnect.driver.summary.ResultSummary;
-import com.mware.stage.destination.bigconnect.cypher.Groups;
-import com.mware.stage.destination.bigconnect.cypher.QueryExecErrors;
-import com.mware.stage.lib.Utils;
+import com.mware.bigconnect.driver.Driver;
+import com.mware.bigconnect.driver.Session;
+import com.mware.bigconnect.driver.Statement;
+import com.mware.bigconnect.driver.StatementResult;
+import com.mware.stage.lib.CypherUtils;
 import com.streamsets.pipeline.api.*;
-import com.streamsets.pipeline.api.Record;
 import com.streamsets.pipeline.api.base.RecordProcessor;
 import com.streamsets.pipeline.api.credential.CredentialValue;
 import com.streamsets.pipeline.api.el.ELEval;
@@ -15,11 +13,10 @@ import com.streamsets.pipeline.api.el.ELVars;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URI;
-import java.util.*;
-
-import static com.mware.bigconnect.driver.AuthTokens.basic;
-import static com.mware.bigconnect.driver.Logging.none;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public abstract class BigConnectCypherProcessor extends RecordProcessor {
   private static final Logger LOG = LoggerFactory.getLogger(BigConnectCypherProcessor.class);
@@ -40,22 +37,9 @@ public abstract class BigConnectCypherProcessor extends RecordProcessor {
   }
 
   private void init(Stage.Context context, List<ConfigIssue> issues) {
-    if (issues.isEmpty()) {
-      try {
-        URI uri = URI.create(getConnectionString());
-        driver = BigConnect.driver(uri, basic( getUsername().get(), getPassword().get()), insecureConfigBuilder().build());
-        driver.verifyConnectivity();
-      } catch (Exception e) {
-        LOG.error("Can't open connection", e);
-        issues.add(
-                context.createConfigIssue(
-                        Groups.CONNECTION.name(),
-                        "config.query",
-                        QueryExecErrors.QUERY_EXECUTOR_001,
-                        e.getMessage()
-                )
-        );
-      }
+    if(issues.isEmpty()) {
+      driver = CypherUtils.connect(
+              getConnectionString(), getUsername().get(), getPassword().get(), issues, context);
     }
   }
 
@@ -73,55 +57,32 @@ public abstract class BigConnectCypherProcessor extends RecordProcessor {
     ELVars variables = getContext().createELVars();
     ELEval queryEval = getContext().createELEval("query");
 
-    try (Session session = getSession()) {
+    try (Session session = CypherUtils.getSession(driver)) {
         String _query = queryEval.eval(variables, getQuery(), String.class);
-        Map<String, Object> params = new HashMap<>();
-        getQueryParams().forEach((k, v) -> {
-          if (record.has(v)) {
-            Object _v = record.get(v).getValue();
-            if (_v instanceof Map) {
-              Map<String, Object> fieldMap = (Map<String, Object>) _v;
-              fieldMap.forEach((k1, v1) -> {
-                if (v1 instanceof Field) {
-                  fieldMap.put(k1, ((Field) v1).getValue());
-                }
-              });
-            } else if (_v instanceof ArrayList) {
-              List<Field> fieldList = (List<Field>) _v;
-              List<Object> valueList = new ArrayList<>();
-              fieldList.forEach((f1) -> {
-                valueList.add(f1.getValue());
-              });
-              _v = valueList;
-            }
-            params.put(k, _v);
-          } else {
-            LOG.error("Can't find field: " + v);
-            throw new StageException(QueryExecErrors.QUERY_EXECUTOR_002, v);
-          }
-        });
-      LOG.trace("Executing query: {}", _query);
-      Statement statement = new Statement(_query, params);
-      StatementResult result = session.run(statement);
-      ResultSummary resultSummary = result.consume();
-      batchMaker.addRecord(record);
+        LOG.trace("Executing query: {}", _query);
+        Statement statement = new Statement(_query,
+                CypherUtils.prepareCypherParams(record, getQueryParams()));
+        StatementResult result = session.run(statement);
+
+        record.set("/cypher", Field.create( // TODO - make "/cypher" field name configurable (if needed)
+                          parseCypherResult(result)));
+        batchMaker.addRecord(record);
     }
   }
 
+  private List<Field> parseCypherResult(StatementResult result) {
+    List<Field> cypherResult = new ArrayList<>();
+    Map<String, Object> row;
+    while (result.hasNext()) {
+      com.mware.bigconnect.driver.Record r = result.next();
+      row = r.get(0).asMap();
+      final Map<String, Field> srow = new HashMap<>();
+      for (Map.Entry<String, Object> e : row.entrySet()) {
+        srow.put(e.getKey(), Field.create(e.getValue().toString()));
+      }
+      cypherResult.add(Field.create(srow));
+    }
 
-
-  public Session getSession() {
-    return driver.session(
-            SessionConfig.builder()
-                    .withDefaultAccessMode(AccessMode.WRITE)
-                    .build()
-    );
+    return cypherResult;
   }
-
-  public static com.mware.bigconnect.driver.Config.ConfigBuilder insecureConfigBuilder() {
-    return Config.builder()
-            .withoutEncryption()
-            .withLogging(none());
-  }
-
 }

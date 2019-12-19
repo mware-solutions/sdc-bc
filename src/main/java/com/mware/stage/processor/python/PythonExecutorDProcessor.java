@@ -1,7 +1,7 @@
 package com.mware.stage.processor.python;
 
+import com.mware.stage.common.group.PythonExecutorGroups;
 import com.mware.stage.lib.PythonExecutorOutputStreams;
-import com.mware.stage.origin.python.Groups;
 import com.streamsets.pipeline.api.ConfigDef;
 import com.streamsets.pipeline.api.ConfigGroups;
 import com.streamsets.pipeline.api.GenerateResourceBundle;
@@ -15,7 +15,7 @@ import com.streamsets.pipeline.api.StageDef;
     outputStreams = PythonExecutorOutputStreams.class,
     onlineHelpRefUrl = ""
 )
-@ConfigGroups(Groups.class)
+@ConfigGroups(PythonExecutorGroups.class)
 @GenerateResourceBundle
 public class PythonExecutorDProcessor extends PythonExecutorProcessor {
 

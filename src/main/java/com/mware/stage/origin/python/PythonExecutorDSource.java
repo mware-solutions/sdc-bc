@@ -1,11 +1,8 @@
 package com.mware.stage.origin.python;
 
+import com.mware.stage.common.group.PythonExecutorGroups;
 import com.mware.stage.lib.PythonExecutorOutputStreams;
-import com.streamsets.pipeline.api.ConfigDef;
-import com.streamsets.pipeline.api.ConfigGroups;
-import com.streamsets.pipeline.api.ExecutionMode;
-import com.streamsets.pipeline.api.GenerateResourceBundle;
-import com.streamsets.pipeline.api.StageDef;
+import com.streamsets.pipeline.api.*;
 
 import java.util.List;
 
@@ -19,7 +16,7 @@ import java.util.List;
     recordsByRef = true,
     onlineHelpRefUrl = ""
 )
-@ConfigGroups(value = Groups.class)
+@ConfigGroups(value = PythonExecutorGroups.class)
 @GenerateResourceBundle
 public class PythonExecutorDSource extends PythonExecutorSource {
 

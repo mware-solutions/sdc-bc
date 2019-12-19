@@ -1,16 +1,16 @@
-package com.mware.stage.origin.python;
+package com.mware.stage.common.group;
 
 import com.streamsets.pipeline.api.GenerateResourceBundle;
 import com.streamsets.pipeline.api.Label;
 
 @GenerateResourceBundle
-public enum Groups implements Label {
+public enum PythonExecutorGroups implements Label {
   ExecutorConfig("Executor config"),
   ;
 
   private final String label;
 
-  private Groups(String label) {
+  private PythonExecutorGroups(String label) {
     this.label = label;
   }
 

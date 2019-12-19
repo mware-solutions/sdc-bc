@@ -1,5 +1,6 @@
 package com.mware.stage.lib;
 
+import com.mware.stage.common.error.Errors;
 import com.streamsets.pipeline.api.StageException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;

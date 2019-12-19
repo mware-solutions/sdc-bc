@@ -1,7 +1,6 @@
 package com.mware.stage.processor.bigconnect.cypher;
 
-import com.mware.stage.destination.bigconnect.cypher.Groups;
-import com.mware.stage.lib.PythonExecutorOutputStreams;
+import com.mware.stage.common.group.BigConnectCypherGroups;
 import com.streamsets.pipeline.api.*;
 import com.streamsets.pipeline.api.credential.CredentialValue;
 
@@ -14,7 +13,7 @@ import java.util.Map;
     icon = "bc.png",
     onlineHelpRefUrl = ""
 )
-@ConfigGroups(value = Groups.class)
+@ConfigGroups(value = BigConnectCypherGroups.class)
 @GenerateResourceBundle
 @PipelineLifecycleStage
 public class BigConnectCypherDProcessor extends BigConnectCypherProcessor {
@@ -23,7 +22,7 @@ public class BigConnectCypherDProcessor extends BigConnectCypherProcessor {
       required = true,
       type = ConfigDef.Type.TEXT,
       mode = ConfigDef.Mode.SQL,
-      label = "Cpher Query",
+      label = "Cypher Query",
       description = "Cypher Query that should be executed for each incoming record.",
       evaluation = ConfigDef.Evaluation.EXPLICIT,
       displayPosition = 10,
@@ -67,22 +66,27 @@ public class BigConnectCypherDProcessor extends BigConnectCypherProcessor {
   )
   public CredentialValue password;
 
+  @Override
   public String getQuery() {
     return query;
   }
 
+  @Override
   public Map<String, String> getQueryParams() {
     return queryParams;
   }
 
+  @Override
   public String getConnectionString() {
     return connectionString;
   }
 
+  @Override
   public CredentialValue getUsername() {
     return username;
   }
 
+  @Override
   public CredentialValue getPassword() {
     return password;
   }

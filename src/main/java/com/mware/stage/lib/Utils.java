@@ -5,7 +5,6 @@ import com.google.gson.reflect.TypeToken;
 import com.streamsets.pipeline.api.Field;
 import com.streamsets.pipeline.api.Record;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.poi.ss.formula.functions.T;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

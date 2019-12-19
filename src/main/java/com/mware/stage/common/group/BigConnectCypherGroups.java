@@ -1,17 +1,17 @@
-package com.mware.stage.processor.bigconnect.cypher;
+package com.mware.stage.common.group;
 
 import com.streamsets.pipeline.api.GenerateResourceBundle;
 import com.streamsets.pipeline.api.Label;
 
 @GenerateResourceBundle
-public enum Groups implements Label {
+public enum BigConnectCypherGroups implements Label {
     CYPHER("Cypher Query"),
     CONNECTION("Connection"),
     ;
 
     private final String label;
 
-    private Groups(String label) {
+    private BigConnectCypherGroups(String label) {
         this.label = label;
     }
 

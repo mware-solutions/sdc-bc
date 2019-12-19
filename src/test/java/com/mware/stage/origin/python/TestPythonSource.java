@@ -19,13 +19,7 @@
  */
 package com.mware.stage.origin.python;
 
-import com.streamsets.pipeline.api.Record;
-import com.streamsets.pipeline.sdk.SourceRunner;
-import com.streamsets.pipeline.sdk.StageRunner;
-import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.List;
 
 public class TestPythonSource {
   private static final int MAX_BATCH_SIZE = 5;

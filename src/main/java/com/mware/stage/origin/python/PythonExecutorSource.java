@@ -98,21 +98,15 @@ public abstract class PythonExecutorSource extends BasePushSource {
     private int index;
     private String responseLine;
     private PushSource.Context context;
-    private boolean killed;
 
     public RecordProducer(int index, String responseLine, PushSource.Context context) {
         this.index = index;
         this.responseLine = responseLine;
         this.context = context;
-        this.killed = false;
     }
 
     @Override
     public void run() {
-      if (killed) {
-        return;
-      }
-
       BatchContext batchContext = context.startBatch();
       final String rid = "py-src-" + uuid + "::" + index;
       Record record = context.createRecord(rid);
@@ -122,10 +116,6 @@ public abstract class PythonExecutorSource extends BasePushSource {
       }
       context.processBatch(batchContext);
       log.info("Produced record with id: " + rid);
-    }
-
-    public void kill() {
-      this.killed = true;
     }
   }
 }

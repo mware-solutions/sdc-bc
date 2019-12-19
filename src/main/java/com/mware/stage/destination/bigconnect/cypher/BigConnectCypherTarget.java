@@ -1,10 +1,14 @@
 package com.mware.stage.destination.bigconnect.cypher;
 
-import com.mware.bigconnect.driver.*;
-import com.mware.bigconnect.driver.Config;
-import com.mware.bigconnect.driver.summary.ResultSummary;
-import com.streamsets.pipeline.api.*;
+import com.mware.bigconnect.driver.Driver;
+import com.mware.bigconnect.driver.Session;
+import com.mware.bigconnect.driver.Statement;
+import com.mware.bigconnect.driver.StatementResult;
+import com.mware.stage.lib.CypherUtils;
+import com.streamsets.pipeline.api.Batch;
 import com.streamsets.pipeline.api.Record;
+import com.streamsets.pipeline.api.Stage;
+import com.streamsets.pipeline.api.StageException;
 import com.streamsets.pipeline.api.base.BaseExecutor;
 import com.streamsets.pipeline.api.credential.CredentialValue;
 import com.streamsets.pipeline.api.el.ELEval;
@@ -12,74 +16,21 @@ import com.streamsets.pipeline.api.el.ELVars;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URI;
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
-import static com.mware.bigconnect.driver.AuthTokens.basic;
-import static com.mware.bigconnect.driver.Logging.none;
 
-@StageDef(
-    version = 3,
-    label = "BigConnect Cypher Target",
-    description = "Execute Cypher queries against a BigConnect Bolt server [T]",
-    icon = "bc.png",
-    onlineHelpRefUrl = ""
-)
-@ConfigGroups(value = Groups.class)
-@GenerateResourceBundle
-@PipelineLifecycleStage
-public class BigConnectCypherTarget extends BaseExecutor {
+public abstract class BigConnectCypherTarget extends BaseExecutor {
     private static final Logger LOG = LoggerFactory.getLogger(BigConnectCypherTarget.class);
 
-    @ConfigDef(
-            required = true,
-            type = ConfigDef.Type.TEXT,
-            mode = ConfigDef.Mode.SQL,
-            label = "Cpher Query",
-            description = "Cypher Query that should be executed for each incoming record.",
-            evaluation = ConfigDef.Evaluation.EXPLICIT,
-            displayPosition = 10,
-            group = "CYPHER"
-    )
-    public String query;
+    public abstract String getQuery();
+    public abstract Map<String, String> getQueryParams();
+    public abstract String getConnectionString();
+    public abstract CredentialValue getUsername();
+    public abstract CredentialValue getPassword();
 
-    @ConfigDef(
-            required = false,
-            type = ConfigDef.Type.MAP,
-            label = "Query Parameters",
-            displayPosition = 20,
-            group = "CYPHER"
-    )
-    public Map<String, String> queryParams;
-
-    @ConfigDef(
-            required = true,
-            type = ConfigDef.Type.STRING,
-            label = "Bolt Connection String",
-            displayPosition = 10,
-            group = "CONNECTION"
-    )
-    public String connectionString = "";
-
-    @ConfigDef(
-            required = true,
-            type = ConfigDef.Type.CREDENTIAL,
-            label = "Username",
-            displayPosition = 20,
-            group = "CONNECTION"
-    )
-    public CredentialValue username;
-
-    @ConfigDef(
-            required = true,
-            type = ConfigDef.Type.CREDENTIAL,
-            label = "Password",
-            displayPosition = 30,
-            group = "CONNECTION"
-    )
-    public CredentialValue password;
-
-    Driver driver;
+    private Driver driver;
 
     @Override
     protected List<ConfigIssue> init() {
@@ -90,21 +41,8 @@ public class BigConnectCypherTarget extends BaseExecutor {
 
     private void init(Stage.Context context, List<ConfigIssue> issues) {
         if(issues.isEmpty()) {
-            try {
-                URI uri = URI.create(connectionString);
-                driver = BigConnect.driver(uri, basic( username.get(), password.get()), insecureConfigBuilder().build());
-                driver.verifyConnectivity();
-            } catch (Exception e) {
-                LOG.error("Can't open connection", e);
-                issues.add(
-                        context.createConfigIssue(
-                                Groups.CONNECTION.name(),
-                                "config.query",
-                                QueryExecErrors.QUERY_EXECUTOR_001,
-                                e.getMessage()
-                        )
-                );
-            }
+            driver = CypherUtils.connect(
+                    getConnectionString(), getUsername().get(), getPassword().get(), issues, context);
         }
     }
 
@@ -114,37 +52,15 @@ public class BigConnectCypherTarget extends BaseExecutor {
         ELEval queryEval = getContext().createELEval("query");
 
         Iterator<Record> it = batch.getRecords();
-        try (Session session = getSession()) {
+        try (Session session = CypherUtils.getSession(driver)) {
             while (it.hasNext()) {
                 Record record = it.next();
-                String _query = queryEval.eval(variables, query, String.class);
-                Map<String, Object> params = new HashMap<>();
-                queryParams.forEach((k, v) -> {
-                    if (record.has(v)) {
-                        Object _v = record.get(v).getValue();
-                        if (_v instanceof Map) {
-                            Map<String, Object> fieldMap = (Map<String, Object>) _v;
-                            fieldMap.forEach((k1, v1) -> {
-                                if (v1 instanceof Field) {
-                                    fieldMap.put(k1, ((Field) v1).getValue());
-                                }
-                            });
-                        } else if (_v instanceof ArrayList) {
-                            List<Field> fieldList = (List<Field>) _v;
-                            List<Object> valueList = new ArrayList<>();
-                            fieldList.forEach((f1) -> {
-                                valueList.add(f1.getValue());
-                            });
-                            _v = valueList;
-                        }
-                        params.put(k, _v);
-                    } else {
-                        LOG.error("Can't find field: "+v);
-                        throw new StageException(QueryExecErrors.QUERY_EXECUTOR_002, v);
+                String _query = queryEval.eval(variables, getQuery(), String.class);
 
-                    }
-                });
-                processARecord(session, _query, params, record);
+                processARecord(session,
+                               _query,
+                               CypherUtils.prepareCypherParams(record, getQueryParams()),
+                               record);
             }
         }
     }
@@ -153,9 +69,7 @@ public class BigConnectCypherTarget extends BaseExecutor {
         LOG.trace("Executing query: {}", _query);
         Statement statement = new Statement(_query, params);
         StatementResult result = session.run(statement);
-        ResultSummary resultSummary = result.consume();
-
-        // maybe trigger events
+        result.consume();
     }
 
     @Override
@@ -164,19 +78,5 @@ public class BigConnectCypherTarget extends BaseExecutor {
             driver.close();
         }
         super.destroy();
-    }
-
-    public Session getSession() {
-        return driver.session(
-                SessionConfig.builder()
-                        .withDefaultAccessMode(AccessMode.WRITE)
-                        .build()
-        );
-    }
-
-    public static com.mware.bigconnect.driver.Config.ConfigBuilder insecureConfigBuilder() {
-        return Config.builder()
-                .withoutEncryption()
-                .withLogging(none());
     }
 }

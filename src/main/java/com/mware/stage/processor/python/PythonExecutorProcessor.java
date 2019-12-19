@@ -1,6 +1,6 @@
 package com.mware.stage.processor.python;
 
-import com.mware.stage.lib.Errors;
+import com.mware.stage.common.error.Errors;
 import com.mware.stage.lib.PythonRunnable;
 import com.mware.stage.lib.ResponseAction;
 import com.mware.stage.lib.Utils;
