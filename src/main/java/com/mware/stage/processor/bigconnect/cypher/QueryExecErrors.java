@@ -1,4 +1,4 @@
-package com.mware.stage.executor;
+package com.mware.stage.processor.bigconnect.cypher;
 
 import com.streamsets.pipeline.api.ErrorCode;
 

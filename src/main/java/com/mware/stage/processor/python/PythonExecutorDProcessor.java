@@ -9,7 +9,7 @@ import com.streamsets.pipeline.api.StageDef;
 
 @StageDef(
     version = 1,
-    label = "Python Executor [T]",
+    label = "Python Executor [P]",
     description = "",
     icon = "py.png",
     outputStreams = PythonExecutorOutputStreams.class,

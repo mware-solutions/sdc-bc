@@ -11,7 +11,7 @@ import java.util.List;
 
 @StageDef(
     version = 1,
-    label = "Python Executor [E]",
+    label = "Python Executor [O]",
     description = "",
     icon = "py.png",
     outputStreams = PythonExecutorOutputStreams.class,

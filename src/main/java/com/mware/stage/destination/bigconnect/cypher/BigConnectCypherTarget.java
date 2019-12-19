@@ -1,4 +1,4 @@
-package com.mware.stage.executor;
+package com.mware.stage.destination.bigconnect.cypher;
 
 import com.mware.bigconnect.driver.*;
 import com.mware.bigconnect.driver.Config;
@@ -19,17 +19,17 @@ import static com.mware.bigconnect.driver.AuthTokens.basic;
 import static com.mware.bigconnect.driver.Logging.none;
 
 @StageDef(
-        version = 3,
-        label = "BigConnect Cypher Executor",
-        description = "Execute Cypher queries against a BigConnect Bolt server",
-        icon = "bc.png",
-        onlineHelpRefUrl = ""
+    version = 3,
+    label = "BigConnect Cypher Target",
+    description = "Execute Cypher queries against a BigConnect Bolt server [T]",
+    icon = "bc.png",
+    onlineHelpRefUrl = ""
 )
 @ConfigGroups(value = Groups.class)
 @GenerateResourceBundle
 @PipelineLifecycleStage
-public class BigConnectCypherExecutor extends BaseExecutor {
-    private static final Logger LOG = LoggerFactory.getLogger(BigConnectCypherExecutor.class);
+public class BigConnectCypherTarget extends BaseExecutor {
+    private static final Logger LOG = LoggerFactory.getLogger(BigConnectCypherTarget.class);
 
     @ConfigDef(
             required = true,
