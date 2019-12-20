@@ -6,7 +6,8 @@ import com.streamsets.pipeline.api.Label;
 @GenerateResourceBundle
 public enum PythonExecutorOutputStreams  implements Label {
     COMMIT("Commit"),
-    PROCESS("Process");
+    PROCESS("Process"),
+    ERROR("Error");
 
     private final String label;
 

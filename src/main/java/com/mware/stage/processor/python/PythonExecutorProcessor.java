@@ -1,13 +1,11 @@
 package com.mware.stage.processor.python;
 
 import com.mware.stage.common.error.Errors;
+import com.mware.stage.lib.PythonExecutorOutputStreams;
 import com.mware.stage.lib.PythonRunnable;
 import com.mware.stage.lib.ResponseAction;
 import com.mware.stage.lib.Utils;
-import com.streamsets.pipeline.api.BatchMaker;
-import com.streamsets.pipeline.api.ErrorCode;
-import com.streamsets.pipeline.api.Record;
-import com.streamsets.pipeline.api.StageException;
+import com.streamsets.pipeline.api.*;
 import com.streamsets.pipeline.api.base.OnRecordErrorException;
 import com.streamsets.pipeline.api.base.RecordProcessor;
 import org.apache.commons.lang.StringUtils;
@@ -77,9 +75,10 @@ public abstract class PythonExecutorProcessor extends RecordProcessor {
         final String rid = "py-proc-" + uuid + "::" + index;
         Record record = getContext().createRecord(rid);
         Utils.stringToMapRecord(record, responseLine, isJson(), getOutputSeparator());
-        for (int i = 0; i < getContext().getOutputLanes().size(); i++) {
-          batchMaker.addRecord(record, getContext().getOutputLanes().get(i));
-        }
+
+        batchMaker.addRecord(record, getContext().getOutputLanes().get(PythonExecutorOutputStreams.COMMIT.ordinal()));
+        batchMaker.addRecord(record, getContext().getOutputLanes().get(PythonExecutorOutputStreams.PROCESS.ordinal()));
+
         LOG.info("Produced record with id: " + rid);
       }
     });
@@ -94,7 +93,12 @@ public abstract class PythonExecutorProcessor extends RecordProcessor {
         if (params[0].toString().contains("Needs login")) {
           errorCode = Errors.BC_CUST_02;
         }
+
+        record.get().getValueAsMap().put("error", Field.create(params[0].toString()));
       }
+
+      batchMaker.addRecord(record, getContext().getOutputLanes().get(PythonExecutorOutputStreams.ERROR.ordinal()));
+
       throw new OnRecordErrorException(
               record,
               errorCode,

@@ -44,6 +44,7 @@ public class BigConnectCypherDProcessor extends BigConnectCypherProcessor {
       type = ConfigDef.Type.STRING,
       label = "Bolt Connection String",
       displayPosition = 10,
+      defaultValue = "bolt://localhost:10242",
       group = "CONNECTION"
   )
   public String connectionString = "";
@@ -52,6 +53,7 @@ public class BigConnectCypherDProcessor extends BigConnectCypherProcessor {
       required = true,
       type = ConfigDef.Type.CREDENTIAL,
       label = "Username",
+      defaultValue = "admin",
       displayPosition = 20,
       group = "CONNECTION"
   )
@@ -61,6 +63,7 @@ public class BigConnectCypherDProcessor extends BigConnectCypherProcessor {
       required = true,
       type = ConfigDef.Type.CREDENTIAL,
       label = "Password",
+      defaultValue = "admin",
       displayPosition = 30,
       group = "CONNECTION"
   )
