@@ -1,9 +1,6 @@
 package com.mware.stage.destination.bigconnect.cypher;
 
-import com.mware.bigconnect.driver.Driver;
-import com.mware.bigconnect.driver.Session;
-import com.mware.bigconnect.driver.Statement;
-import com.mware.bigconnect.driver.StatementResult;
+import com.mware.bigconnect.driver.*;
 import com.mware.stage.lib.CypherUtils;
 import com.streamsets.pipeline.api.Batch;
 import com.streamsets.pipeline.api.Record;
@@ -53,23 +50,24 @@ public abstract class BigConnectCypherTarget extends BaseExecutor {
 
         Iterator<Record> it = batch.getRecords();
         try (Session session = CypherUtils.getSession(driver)) {
+            Transaction t = session.beginTransaction();
             while (it.hasNext()) {
                 Record record = it.next();
                 String _query = queryEval.eval(variables, getQuery(), String.class);
 
-                processARecord(session,
+                processARecord(t,
                                _query,
                                CypherUtils.prepareCypherParams(record, getQueryParams()),
                                record);
             }
+            t.commit();
         }
     }
 
-    private void processARecord(Session session, String _query, Map<String, Object> params, Record record) throws StageException {
+    private void processARecord(Transaction session, String _query, Map<String, Object> params, Record record) throws StageException {
         LOG.trace("Executing query: {}", _query);
         Statement statement = new Statement(_query, params);
-        StatementResult result = session.run(statement);
-        result.consume();
+        session.run(statement);
     }
 
     @Override
