@@ -1,5 +1,7 @@
 package com.mware.stage.lib;
 
+import com.beust.jcommander.internal.Lists;
+import com.google.common.collect.Maps;
 import com.mware.bigconnect.driver.*;
 import com.mware.stage.common.error.QueryExecErrors;
 import com.mware.stage.common.group.BigConnectCypherGroups;
@@ -49,22 +51,7 @@ public class CypherUtils {
         queryParams.forEach((k, v) -> {
             if (record.has(v)) {
                 Object _v = record.get(v).getValue();
-                if (_v instanceof Map) {
-                    Map<String, Object> fieldMap = (Map<String, Object>) _v;
-                    fieldMap.forEach((k1, v1) -> {
-                        if (v1 instanceof Field) {
-                            fieldMap.put(k1, ((Field) v1).getValue());
-                        }
-                    });
-                } else if (_v instanceof ArrayList) {
-                    List<Field> fieldList = (List<Field>) _v;
-                    List<Object> valueList = new ArrayList<>();
-                    fieldList.forEach((f1) -> {
-                        valueList.add(f1.getValue());
-                    });
-                    _v = valueList;
-                }
-                params.put(k, _v);
+                params.put(k, toCypherValue(_v));
             } else {
                 LOG.error("Can't find field: " + v);
                 throw new StageException(QueryExecErrors.QUERY_EXECUTOR_002, v);
@@ -72,6 +59,30 @@ public class CypherUtils {
         });
 
         return params;
+    }
+
+    private static Object toCypherValue(Object value) {
+        if (value == null)
+            return null;
+
+        if (value instanceof Field) {
+            return ((Field)value).getValue();
+        } else if (value instanceof Map) {
+            Map<String, Object> fieldMap = Maps.newHashMap((Map<String, Object>) value);
+            fieldMap.forEach((k1, v1) -> {
+                fieldMap.put(k1, toCypherValue(v1));
+            });
+            return fieldMap;
+        } else if (value instanceof ArrayList) {
+            List<Field> fieldList = Lists.newArrayList((List <Field>) value);
+            List<Object> valueList = new ArrayList<>();
+            fieldList.forEach((f1) -> {
+                valueList.add(toCypherValue(f1.getValue()));
+            });
+            return valueList;
+        } else {
+            return value;
+        }
     }
 
     public static Session getSession(Driver driver) {

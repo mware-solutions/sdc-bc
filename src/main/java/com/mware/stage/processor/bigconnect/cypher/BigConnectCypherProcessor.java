@@ -1,11 +1,13 @@
 package com.mware.stage.processor.bigconnect.cypher;
 
-import com.mware.bigconnect.driver.Driver;
-import com.mware.bigconnect.driver.Session;
-import com.mware.bigconnect.driver.Statement;
-import com.mware.bigconnect.driver.StatementResult;
+import com.mware.bigconnect.driver.*;
+import com.mware.bigconnect.driver.internal.InternalNode;
+import com.mware.bigconnect.driver.internal.value.*;
+import com.mware.bigconnect.driver.types.Node;
+import com.mware.bigconnect.driver.types.Relationship;
 import com.mware.stage.lib.CypherUtils;
 import com.streamsets.pipeline.api.*;
+import com.streamsets.pipeline.api.Record;
 import com.streamsets.pipeline.api.base.RecordProcessor;
 import com.streamsets.pipeline.api.credential.CredentialValue;
 import com.streamsets.pipeline.api.el.ELEval;
@@ -64,25 +66,50 @@ public abstract class BigConnectCypherProcessor extends RecordProcessor {
                 CypherUtils.prepareCypherParams(record, getQueryParams()));
         StatementResult result = session.run(statement);
 
-        record.set("/cypher", Field.create( // TODO - make "/cypher" field name configurable (if needed)
-                          parseCypherResult(result)));
+        record.set("/cypher", Field.create( parseCypherResult(result) ));
         batchMaker.addRecord(record);
     }
   }
 
-  private List<Field> parseCypherResult(StatementResult result) {
-    List<Field> cypherResult = new ArrayList<>();
-    Map<String, Object> row;
+  private Map<String, Field> parseCypherResult(StatementResult result) {
+    Map<String, Field> cypherResult = new HashMap<>();
+
     while (result.hasNext()) {
       com.mware.bigconnect.driver.Record r = result.next();
-      row = r.get(0).asMap();
-      final Map<String, Field> srow = new HashMap<>();
-      for (Map.Entry<String, Object> e : row.entrySet()) {
-        srow.put(e.getKey(), Field.create(e.getValue().toString()));
-      }
-      cypherResult.add(Field.create(srow));
+      r.asMap().forEach((k, v) -> {
+        cypherResult.put(k, toSdcField(v));
+      });
     }
 
     return cypherResult;
+  }
+
+  private Field toSdcField(Object v) {
+    if (v instanceof Node) {
+      Node n = (Node) v;
+      return Field.create(n.asMap(this::bcValueToField));
+    } else if (v instanceof Relationship) {
+      Relationship r = (Relationship) v;
+      return Field.create(r.asMap(this::bcValueToField));
+    } else {
+      return Field.create(v.toString());
+    }
+  }
+
+  private Field bcValueToField(Value v) {
+    if (v instanceof StringValue) {
+      return Field.create(((StringValue)v).asObject());
+    } else if (v instanceof BooleanValue) {
+      return Field.create(((BooleanValue)v).asObject());
+    } else if (v instanceof FloatValue) {
+      return Field.create(((FloatValue)v).asObject());
+    } else if (v instanceof IntegerValue) {
+      return Field.create(((IntegerValue)v).asObject());
+    } else if (v instanceof ListValue) {
+      return Field.create(((ListValue)v).asList(this::bcValueToField));
+    } else if (v instanceof MapValue) {
+      return Field.create(((MapValue)v).asMap(this::bcValueToField));
+    } else
+      return Field.create(v.asString());
   }
 }

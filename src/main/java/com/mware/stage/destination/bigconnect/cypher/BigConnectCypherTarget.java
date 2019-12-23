@@ -50,21 +50,19 @@ public abstract class BigConnectCypherTarget extends BaseExecutor {
 
         Iterator<Record> it = batch.getRecords();
         try (Session session = CypherUtils.getSession(driver)) {
-            Transaction t = session.beginTransaction();
             while (it.hasNext()) {
                 Record record = it.next();
                 String _query = queryEval.eval(variables, getQuery(), String.class);
 
-                processARecord(t,
+                processARecord(session,
                                _query,
                                CypherUtils.prepareCypherParams(record, getQueryParams()),
                                record);
             }
-            t.commit();
         }
     }
 
-    private void processARecord(Transaction session, String _query, Map<String, Object> params, Record record) throws StageException {
+    private void processARecord(Session session, String _query, Map<String, Object> params, Record record) throws StageException {
         LOG.trace("Executing query: {}", _query);
         Statement statement = new Statement(_query, params);
         session.run(statement);
