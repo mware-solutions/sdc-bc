@@ -97,6 +97,7 @@ public abstract class BigConnectCypherProcessor extends RecordProcessor {
   }
 
   private Field bcValueToField(Value v) {
+    // TODO: handle dates
     if (v instanceof StringValue) {
       return Field.create(((StringValue)v).asObject());
     } else if (v instanceof BooleanValue) {
@@ -106,9 +107,9 @@ public abstract class BigConnectCypherProcessor extends RecordProcessor {
     } else if (v instanceof IntegerValue) {
       return Field.create(((IntegerValue)v).asObject());
     } else if (v instanceof ListValue) {
-      return Field.create(((ListValue)v).asList(this::bcValueToField));
+      return Field.create(v.asList(this::bcValueToField));
     } else if (v instanceof MapValue) {
-      return Field.create(((MapValue)v).asMap(this::bcValueToField));
+      return Field.create(v.asMap(this::bcValueToField));
     } else
       return Field.create(v.asString());
   }
