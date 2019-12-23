@@ -68,6 +68,9 @@ public abstract class BigConnectCypherProcessor extends RecordProcessor {
 
         record.set("/cypher", Field.create( parseCypherResult(result) ));
         batchMaker.addRecord(record);
+    } catch (Exception ex) {
+      ex.printStackTrace();
+      throw ex;
     }
   }
 
