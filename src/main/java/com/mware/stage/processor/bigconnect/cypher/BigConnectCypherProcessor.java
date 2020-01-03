@@ -15,10 +15,10 @@ import com.streamsets.pipeline.api.el.ELVars;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.*;
 
 public abstract class BigConnectCypherProcessor extends RecordProcessor {
   private static final Logger LOG = LoggerFactory.getLogger(BigConnectCypherProcessor.class);
@@ -100,7 +100,6 @@ public abstract class BigConnectCypherProcessor extends RecordProcessor {
   }
 
   private Field bcValueToField(Value v) {
-    // TODO: handle dates
     if (v instanceof StringValue) {
       return Field.create(((StringValue)v).asObject());
     } else if (v instanceof BooleanValue) {
@@ -113,7 +112,22 @@ public abstract class BigConnectCypherProcessor extends RecordProcessor {
       return Field.create(v.asList(this::bcValueToField));
     } else if (v instanceof MapValue) {
       return Field.create(v.asMap(this::bcValueToField));
-    } else
+    } else if (v instanceof DateTimeValue) {
+      DateTimeValue dtv = (DateTimeValue) v;
+      return Field.createZonedDateTime(dtv.asZonedDateTime());
+    } else if (v instanceof DateValue) {
+      DateValue dtv = (DateValue) v;
+      Instant utcStartOfDay = dtv.asLocalDate().atStartOfDay().atZone(ZoneOffset.UTC).toInstant();
+      return Field.createDate(Date.from(utcStartOfDay));
+    } else if (v instanceof LocalDateTimeValue) {
+      LocalDateTimeValue dtv = (LocalDateTimeValue) v;
+      return Field.createZonedDateTime(dtv.asLocalDateTime().atZone(ZoneOffset.UTC));
+    } else if (v instanceof LocalTimeValue) {
+      LocalTimeValue dtv = (LocalTimeValue) v;
+      Date d = Date.from(dtv.asLocalTime().atDate(LocalDate.now()).atZone(ZoneOffset.UTC).toInstant());
+      return Field.createTime(d);
+    }
+    else
       return Field.create(v.asString());
   }
 }
