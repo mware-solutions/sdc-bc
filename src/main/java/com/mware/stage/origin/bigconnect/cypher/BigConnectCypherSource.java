@@ -81,6 +81,13 @@ public abstract class BigConnectCypherSource extends BasePushSource {
       }
       executor.shutdownNow();
     }
+
+    try {
+      driver.close();
+      driver = null;
+    } catch (Exception ex) {
+      ex.printStackTrace();
+    }
   }
 
   class SDCRecordProducer implements Runnable {
