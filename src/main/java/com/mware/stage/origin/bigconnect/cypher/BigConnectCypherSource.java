@@ -108,10 +108,18 @@ public abstract class BigConnectCypherSource extends BasePushSource {
       Record record = context.createRecord(rid);
 
       Map<String, Field> row = new HashMap<>();
-      for (Map.Entry<String, Object> e : cypherRecord.get(0).asMap().entrySet()) {
-        row.put(e.getKey(), Field.create(e.getValue().toString()));
+      if ("node".equals(cypherRecord.get(0).type().name().toLowerCase())) {
+        for (Map.Entry<String, Object> e : cypherRecord.get(0).asMap().entrySet()) {
+          row.put(e.getKey(), Field.create(e.getValue().toString()));
+        }
+
+      } else {
+        //Assume STRING
+        //TODO - Handle other possible scenarios
+        row.put("result", Field.create(cypherRecord.get(0).asString()));
       }
       record.set(Field.create(row));
+
 
       batchContext.getBatchMaker().addRecord(record);
       context.processBatch(batchContext);
