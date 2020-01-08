@@ -112,11 +112,10 @@ public abstract class BigConnectCypherSource extends BasePushSource {
         for (Map.Entry<String, Object> e : cypherRecord.get(0).asMap().entrySet()) {
           row.put(e.getKey(), Field.create(e.getValue().toString()));
         }
-
       } else {
-        //Assume STRING
-        //TODO - Handle other possible scenarios
-        row.put("result", Field.create(cypherRecord.get(0).asString()));
+        for (int i = 0; i < cypherRecord.size(); i++) {
+          row.put(cypherRecord.keys().get(i), Field.create(cypherRecord.get(i).asString()));
+        }
       }
       record.set(Field.create(row));
 
