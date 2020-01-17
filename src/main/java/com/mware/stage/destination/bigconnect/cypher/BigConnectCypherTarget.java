@@ -70,11 +70,9 @@ public abstract class BigConnectCypherTarget extends BaseExecutor {
 
     @Override
     public void destroy() {
-        // this takes a long time to finish
-
-//        if (driver != null) {
-//            driver.close();
-//        }
+        if (driver != null) {
+            driver.closeAsync();
+        }
         super.destroy();
     }
 }
