@@ -47,9 +47,11 @@ public abstract class BigConnectCypherProcessor extends RecordProcessor {
 
   @Override
   public void destroy() {
-    if (driver != null) {
-      driver.close();
-    }
+    // takes a long time to finish
+
+//    if (driver != null) {
+//      driver.close();
+//    }
     super.destroy();
   }
 
