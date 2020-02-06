@@ -1,22 +1,3 @@
-/**
- * Copyright 2015 StreamSets Inc.
- *
- * Licensed under the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.mware.stage.destination.bigconnect.simple;
 
 import com.mware.core.model.clientapi.dto.VisibilityJson;
@@ -40,6 +21,7 @@ import com.streamsets.pipeline.api.StageException;
 import com.streamsets.pipeline.api.base.BaseTarget;
 import com.streamsets.pipeline.api.base.OnRecordErrorException;
 import com.streamsets.pipeline.api.impl.Utils;
+import org.apache.commons.lang.StringUtils;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
@@ -62,10 +44,13 @@ public abstract class BigConnectTarget extends BaseTarget {
   public abstract boolean isCreateRelationship();
   public abstract String getRelationshipName();
   public abstract String getRelIdSeed();
+  public abstract String getFixedRelId();
   public abstract boolean isRelSource();
+  public abstract boolean isWorkQueue();
   public abstract Map<String, String> getMapping();
 
   private BigConnectSystem bigConnect;
+  private List<ElementMutation<? extends Element>> elements;
 
   /** {@inheritDoc} */
   @Override
@@ -87,6 +72,7 @@ public abstract class BigConnectTarget extends BaseTarget {
     } catch(Exception e) {
       e.printStackTrace();
     }
+    elements = new ArrayList<>();
 
     return issues;
   }
@@ -110,13 +96,15 @@ public abstract class BigConnectTarget extends BaseTarget {
       } catch (Exception e) {
         switch (getContext().getOnErrorRecord()) {
           case DISCARD:
+            e.printStackTrace();
             break;
           case TO_ERROR:
-            getContext().toError(record, Errors.BC_01, e.toString());
+            e.printStackTrace();
+            getContext().toError(record, Errors.BC_01, e);
             break;
           case STOP_PIPELINE:
             e.printStackTrace();
-            throw new StageException(Errors.BC_01, e.toString());
+            throw new StageException(Errors.BC_01, e);
           default:
             throw new IllegalStateException(
                 Utils.format("Unknown OnError value '{}'", getContext().getOnErrorRecord(), e)
@@ -124,6 +112,7 @@ public abstract class BigConnectTarget extends BaseTarget {
         }
       }
     }
+    saveBatch();
   }
 
   /**
@@ -141,7 +130,6 @@ public abstract class BigConnectTarget extends BaseTarget {
     if (isCreateRelationship()) {
         createEdge(record, vertexId);
     }
-    bigConnect.getGraph().flush();
   }
 
   private String createVertex(Record record) {
@@ -154,11 +142,9 @@ public abstract class BigConnectTarget extends BaseTarget {
       Visibility visibility = bigConnect.getVisibilityTranslator().getDefaultVisibility();
       VisibilityJson visibilityJson = new VisibilityJson(visibility.getVisibilityString());
       PropertyMetadata propertyMetadata = new PropertyMetadata(new Date(), bigConnect.getSystemUser(), 0d, visibilityJson, visibility);
-      List<ElementMutation<? extends Element>> elements = new ArrayList<>();
       final String vertexId = generateId(fields, getIdSeed());
 
       ElementMutation<Vertex> vb = graph.prepareVertex(vertexId, visibility);
-
       setPropertyValue(BcSchema.VISIBILITY_JSON, vb, visibilityJson, propertyMetadata, visibility);
       setPropertyValue(BcSchema.CONCEPT_TYPE, vb, getConcept(), propertyMetadata, visibility);
       setPropertyValue(BcSchema.MODIFIED_DATE, vb, new Date(), propertyMetadata, visibility);
@@ -191,44 +177,47 @@ public abstract class BigConnectTarget extends BaseTarget {
       }
       elements.add(vb);
 
-      Iterable<Element> savedElements = graph.saveElementMutations(elements, bigConnect.getAuthorizations());
-      bigConnect.getWorkQueueRepository().pushMultipleGraphPropertyQueue(
-              savedElements,
-              null,
-              null,
-              null,
-              null,
-              Priority.HIGH,
-              null,
-              null
-      );
-
       return vertexId;
   }
 
   private void createEdge(Record record, String vertexId) {
-      final List<ElementMutation<? extends Element>> elements = new ArrayList<>();
       final Field sourceField = record.get(getFieldPath());
       final LinkedHashMap<String, Field> fields = sourceField.getValueAsListMap();
-      final String otherVertexId = generateId(fields, getRelIdSeed());
       final Visibility defaultVisibility = Visibility.EMPTY;
 
-      Vertex vertex = bigConnect.getGraph().getVertex(vertexId, bigConnect.getAuthorizations());
-      Vertex otherVertex = bigConnect.getGraph().getVertex(otherVertexId, bigConnect.getAuthorizations());
-
-      if (vertex != null && otherVertex != null) {
-          EdgeBuilder eb;
-          if (isRelSource()) {
-              eb = bigConnect.getGraph().prepareEdge(vertex, otherVertex, getRelationshipName(), defaultVisibility);
-          } else {
-              eb = bigConnect.getGraph().prepareEdge(otherVertex, vertex, getRelationshipName(), defaultVisibility);
-          }
-          BcSchema.CONCEPT_TYPE.setProperty(eb, SchemaRepository.TYPE_RELATIONSHIP, defaultVisibility);
-          BcSchema.MODIFIED_DATE.setProperty(eb, new Date(), defaultVisibility);
-
-          elements.add(eb);
-          bigConnect.getGraph().saveElementMutations(elements, bigConnect.getAuthorizations());
+      String otherVertexId = getFixedRelId();
+      if (StringUtils.isEmpty(otherVertexId)) {
+          otherVertexId = generateId(fields, getRelIdSeed());
       }
+
+      EdgeBuilderByVertexId eb;
+      if (isRelSource()) {
+          eb = bigConnect.getGraph().prepareEdge(vertexId, otherVertexId, getRelationshipName(), defaultVisibility);
+      } else {
+          eb = bigConnect.getGraph().prepareEdge(otherVertexId, vertexId, getRelationshipName(), defaultVisibility);
+      }
+      BcSchema.CONCEPT_TYPE.setProperty(eb, SchemaRepository.TYPE_RELATIONSHIP, defaultVisibility);
+      BcSchema.MODIFIED_DATE.setProperty(eb, new Date(), defaultVisibility);
+
+      elements.add(eb);
+  }
+
+  private void saveBatch() {
+      Iterable<Element> savedElements = bigConnect.getGraph().saveElementMutations(elements, bigConnect.getAuthorizations());
+      if (isWorkQueue()) {
+          bigConnect.getWorkQueueRepository().pushMultipleGraphPropertyQueue(
+                  savedElements,
+                  null,
+                  null,
+                  null,
+                  null,
+                  Priority.HIGH,
+                  null,
+                  null
+          );
+      }
+      bigConnect.getGraph().flush();
+      elements.clear();
   }
 
   private String generateId(LinkedHashMap<String, Field> fields, String seed) {

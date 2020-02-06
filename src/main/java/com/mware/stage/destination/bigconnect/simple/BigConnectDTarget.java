@@ -109,7 +109,7 @@ public class BigConnectDTarget extends BigConnectTarget {
   public String relationshipName;
 
   @ConfigDef(
-          required = true,
+          required = false,
           type = ConfigDef.Type.STRING,
           defaultValue = "1",
           label = "Relationship End ID Seed",
@@ -119,21 +119,42 @@ public class BigConnectDTarget extends BigConnectTarget {
   public String relIdSeed;
 
   @ConfigDef(
+          required = false,
+          type = ConfigDef.Type.STRING,
+          defaultValue = "",
+          label = "Fixed Relationship End ID",
+          description = "Other relationship end ID (Relationship End ID Seed will be ignored if this is configured)",
+          displayPosition = 80,
+          group = "OntologyMapping"
+  )
+  public String fixedRelId;
+
+  @ConfigDef(
           required = true,
           type = ConfigDef.Type.BOOLEAN,
           defaultValue = "true",
           label = "Relationship Source",
-          displayPosition = 80,
+          displayPosition = 90,
           group = "OntologyMapping"
   )
   public boolean relSource;
 
   @ConfigDef(
           required = true,
+          type = ConfigDef.Type.BOOLEAN,
+          defaultValue = "true",
+          label = "Push to work queue",
+          displayPosition = 100,
+          group = "OntologyMapping"
+  )
+  public boolean workQueue;
+
+  @ConfigDef(
+          required = true,
           type = ConfigDef.Type.MAP,
           defaultValue = "",
           label = "Field Mapping",
-          displayPosition = 90,
+          displayPosition = 110,
           group = "OntologyMapping"
   )
   public Map<String, String> mapping;
@@ -170,8 +191,16 @@ public class BigConnectDTarget extends BigConnectTarget {
     return relIdSeed;
   }
 
+  public String getFixedRelId() {
+    return fixedRelId;
+  }
+
   public boolean isRelSource() {
     return relSource;
+  }
+
+  public boolean isWorkQueue() {
+    return workQueue;
   }
 
   public Map<String, String> getMapping() {
