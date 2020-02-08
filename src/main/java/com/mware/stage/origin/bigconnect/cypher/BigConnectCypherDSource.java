@@ -6,7 +6,7 @@ import com.streamsets.pipeline.api.credential.CredentialValue;
 
 @StageDef(
         version = 1,
-        label = "BigConnect Cypher Source",
+        label = "BigConnect Cypher Origin",
         description = "Execute Cypher queries against a BigConnect Bolt server [O]",
         icon = "bc.png",
         execution = ExecutionMode.STANDALONE,

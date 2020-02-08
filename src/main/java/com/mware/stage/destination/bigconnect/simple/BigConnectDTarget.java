@@ -28,8 +28,8 @@ import java.util.Map;
 
 @StageDef(
     version = 1,
-    label = "BigConnect Commiter",
-    description = "",
+    label = "BigConnect Graph Engine Destination",
+    description = "Load data directly into the BigConnect Graph Engine",
     icon = "bc.png",
     recordsByRef = true,
     onlineHelpRefUrl = ""

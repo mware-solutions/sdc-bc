@@ -8,7 +8,7 @@ import java.util.Map;
 
 @StageDef(
         version = 1,
-        label = "BigConnect Cypher Target",
+        label = "BigConnect Cypher Destination",
         description = "Execute Cypher queries against a BigConnect Bolt server [T]",
         icon = "bc.png",
         onlineHelpRefUrl = ""
