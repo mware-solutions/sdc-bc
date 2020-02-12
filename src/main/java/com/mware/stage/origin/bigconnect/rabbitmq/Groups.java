@@ -17,33 +17,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mware.stage.common.error;
+package com.mware.stage.origin.bigconnect.rabbitmq;
 
-import com.streamsets.pipeline.api.ErrorCode;
 import com.streamsets.pipeline.api.GenerateResourceBundle;
+import com.streamsets.pipeline.api.Label;
 
 @GenerateResourceBundle
-public enum Errors implements ErrorCode {
-
-  BC_00("Configuration is invalid because: {}"),
-  BC_01("Specific reason writing record failed: {}"),
-  BC_02("Python process error: {}"),
+public enum Groups implements Label {
+  Connection("Connection")
   ;
-  private final String msg;
 
-  Errors(String msg) {
-    this.msg = msg;
+  private final String label;
+
+  private Groups(String label) {
+    this.label = label;
   }
 
   /** {@inheritDoc} */
   @Override
-  public String getCode() {
-    return name();
-  }
-
-  /** {@inheritDoc} */
-  @Override
-  public String getMessage() {
-    return msg;
+  public String getLabel() {
+    return this.label;
   }
 }

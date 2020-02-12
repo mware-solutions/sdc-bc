@@ -41,8 +41,8 @@ public class BigConnectDTarget extends BigConnectTarget {
   @ConfigDef(
           required = true,
           type = ConfigDef.Type.STRING,
-          defaultValue = "/opt/bigconnect/config",
-          label = "BigConnect Config Path",
+          defaultValue = "/opt/bdl/etc/explore",
+          label = "BigConnect Graph Engine Config Path",
           displayPosition = 0,
           group = "OntologyMapping"
   )
