@@ -25,6 +25,7 @@ import com.streamsets.pipeline.api.Label;
 @GenerateResourceBundle
 public enum Groups implements Label {
   OntologyMapping("Ontology Mapping"),
+  Connection("Connection"),
   ;
 
   private final String label;

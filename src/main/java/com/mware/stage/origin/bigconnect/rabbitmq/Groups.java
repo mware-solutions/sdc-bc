@@ -17,16 +17,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mware.stage.origin.python;
+package com.mware.stage.origin.bigconnect.rabbitmq;
 
-import org.junit.Test;
+import com.streamsets.pipeline.api.GenerateResourceBundle;
+import com.streamsets.pipeline.api.Label;
 
-public class TestPythonSource {
-  private static final int MAX_BATCH_SIZE = 5;
+@GenerateResourceBundle
+public enum Groups implements Label {
+  Connection("Connection")
+  ;
 
-  @Test
-  public void testOrigin() throws Exception {
+  private final String label;
 
+  private Groups(String label) {
+    this.label = label;
   }
 
+  /** {@inheritDoc} */
+  @Override
+  public String getLabel() {
+    return this.label;
+  }
 }

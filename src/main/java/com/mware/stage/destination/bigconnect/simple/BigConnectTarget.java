@@ -61,7 +61,7 @@ public abstract class BigConnectTarget extends BaseTarget {
     if (!configDir.exists() || !configDir.isDirectory()) {
       issues.add(
           getContext().createConfigIssue(
-                  Groups.OntologyMapping.name(), "config", Errors.BC_00, "BigConnect Config path does not exist or it's not a directory."
+                  Groups.OntologyMapping.name(), "config", Errors.BC_00, "BigConnect Graph Engine config path does not exist or it's not a directory."
           )
       );
     }
@@ -70,7 +70,12 @@ public abstract class BigConnectTarget extends BaseTarget {
     try {
         bigConnect.init(getConfigPath());
     } catch(Exception e) {
-      e.printStackTrace();
+        issues.add(
+                getContext().createConfigIssue(
+                        Groups.Connection.name(), "config", Errors.BC_00, "Could not connect to BigConnect Graph Engine: "+e.getMessage()
+                )
+        );
+        e.printStackTrace();
     }
     elements = new ArrayList<>();
 

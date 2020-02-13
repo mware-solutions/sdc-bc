@@ -25,7 +25,7 @@ import com.streamsets.pipeline.api.GenerateResourceBundle;
 @GenerateResourceBundle
 public enum Errors implements ErrorCode {
 
-  BC_00("A configuration is invalid because: {}"),
+  BC_00("Configuration is invalid because: {}"),
   BC_01("Specific reason writing record failed: {}"),
   BC_02("Python process error: {}"),
   ;

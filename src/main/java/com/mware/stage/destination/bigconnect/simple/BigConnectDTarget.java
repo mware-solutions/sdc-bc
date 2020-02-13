@@ -28,8 +28,8 @@ import java.util.Map;
 
 @StageDef(
     version = 1,
-    label = "BigConnect Commiter",
-    description = "",
+    label = "BigConnect Graph Engine Destination",
+    description = "Load data directly into the BigConnect Graph Engine",
     icon = "bc.png",
     recordsByRef = true,
     onlineHelpRefUrl = ""
@@ -41,8 +41,8 @@ public class BigConnectDTarget extends BigConnectTarget {
   @ConfigDef(
           required = true,
           type = ConfigDef.Type.STRING,
-          defaultValue = "/opt/bigconnect/config",
-          label = "BigConnect Config Path",
+          defaultValue = "/opt/bdl/etc/explore",
+          label = "BigConnect Graph Engine Config Path",
           displayPosition = 0,
           group = "OntologyMapping"
   )

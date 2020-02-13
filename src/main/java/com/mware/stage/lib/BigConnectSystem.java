@@ -45,19 +45,23 @@ public class BigConnectSystem {
         return _INSTANCE;
     }
 
-    private BigConnectSystem() {}
+    public BigConnectSystem() {}
 
     public void init(String configDir) throws Exception {
         InjectHelper.inject(this, BcBootstrap.bootstrapModuleMaker(getConfiguration(configDir)), getConfiguration(configDir));
     }
 
-    protected Configuration getConfiguration(String configDir) throws Exception {
+    public Configuration getConfiguration(String configDir) throws Exception {
         if (configuration == null) {
             Map config = ConfigurationUtils.loadConfig(Collections.singletonList(
                     configDir + File.separator + "bc.properties"
             ), "");
             configuration = ConfigurationLoader.load(HashMapConfigurationLoader.class, config);
         }
+        return configuration;
+    }
+
+    public Configuration getConfiguration() {
         return configuration;
     }
 
