@@ -62,6 +62,17 @@ public class PythonExecutorDProcessor extends PythonExecutorProcessor {
   )
   public String outputSeparator;
 
+  @ConfigDef(
+      required = false,
+      type = ConfigDef.Type.STRING,
+      defaultValue = "",
+      label = "Target Field",
+      description = "Field that stores the result (If not set a new record is created)",
+      displayPosition = 50,
+      group = "ExecutorConfig"
+  )
+  public String targetField;
+
   /** {@inheritDoc} */
   @Override
   public String getScriptPath() {
@@ -81,5 +92,10 @@ public class PythonExecutorDProcessor extends PythonExecutorProcessor {
   @Override
   public String getOutputSeparator() {
     return outputSeparator;
+  }
+
+  @Override
+  public String getTargetField() {
+    return targetField;
   }
 }

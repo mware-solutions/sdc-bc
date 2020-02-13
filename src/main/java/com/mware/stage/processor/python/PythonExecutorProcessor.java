@@ -28,6 +28,8 @@ public abstract class PythonExecutorProcessor extends RecordProcessor {
 
     public abstract String getOutputSeparator();
 
+    public abstract String getTargetField();
+
     private PythonRunnable runner;
     private String uuid;
 
@@ -78,8 +80,14 @@ public abstract class PythonExecutorProcessor extends RecordProcessor {
 
         Exception e = runner.runWithCallback((index, responseLine) -> {
             final String rid = "py-proc-" + uuid + "::" + index;
-            Record record1 = getContext().createRecord(rid);
-            record1.set(Field.create(responseLine));
+            Record record1 = null;
+            if (StringUtils.isEmpty(getTargetField())) {
+                record1 = getContext().createRecord(rid);
+                record1.set(Field.create(responseLine));
+            } else {
+                record1 = record;
+                record1.set(getTargetField(), Field.create(responseLine));
+            }
 
             batchMaker.addRecord(record1, getContext().getOutputLanes().get(PythonExecutorOutputStreams.COMMIT.ordinal()));
             batchMaker.addRecord(record1, getContext().getOutputLanes().get(PythonExecutorOutputStreams.PROCESS.ordinal()));
