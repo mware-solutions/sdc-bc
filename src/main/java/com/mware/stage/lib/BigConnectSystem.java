@@ -19,6 +19,7 @@ import com.mware.core.security.VisibilityTranslator;
 import com.mware.core.user.User;
 import com.mware.ge.Authorizations;
 import com.mware.ge.Graph;
+import com.mware.ge.GraphFactory;
 import com.mware.ge.util.ConfigurationUtils;
 
 import java.io.File;
@@ -48,7 +49,21 @@ public class BigConnectSystem {
     public BigConnectSystem() {}
 
     public void init(String configDir) throws Exception {
-        InjectHelper.inject(this, BcBootstrap.bootstrapModuleMaker(getConfiguration(configDir)), getConfiguration(configDir));
+        if (checkGraphAvailable(configDir)) {
+            InjectHelper.inject(this, BcBootstrap.bootstrapModuleMaker(getConfiguration(configDir)), getConfiguration(configDir));
+        } else {
+            throw new Exception("Graph System is not available");
+        }
+    }
+
+    private boolean checkGraphAvailable(String configDir) {
+        try {
+            new GraphFactory().createGraph(getConfiguration(configDir).getSubset("graph"));
+            return true;
+        } catch(Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public Configuration getConfiguration(String configDir) throws Exception {
