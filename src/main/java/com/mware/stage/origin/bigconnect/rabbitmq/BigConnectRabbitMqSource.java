@@ -1,11 +1,12 @@
 package com.mware.stage.origin.bigconnect.rabbitmq;
 
 import com.google.common.collect.ImmutableList;
+import com.mware.core.config.Configuration;
 import com.mware.core.ingest.WorkerTuple;
 import com.mware.core.ingest.dataworker.DataWorkerMessage;
 import com.mware.core.ingest.dataworker.ElementOrPropertyStatus;
-import com.mware.core.model.WorkQueueNames;
 import com.mware.core.model.workQueue.RabbitMQWorkQueueSpout;
+import com.mware.core.model.workQueue.WorkQueueRepository;
 import com.mware.ge.Edge;
 import com.mware.ge.Element;
 import com.mware.ge.FetchHints;
@@ -32,7 +33,6 @@ public abstract class BigConnectRabbitMqSource extends BasePushSource {
     private final TransferQueue<WorkerItemWrapper> tupleQueue = new LinkedTransferQueue<>();
     private List<Thread> processThreads = new ArrayList<>();
     private QueueMessageProcessor messageProcessor;
-    private WorkQueueNames queueNames;
 
     public abstract String getConfigPath();
 
@@ -63,8 +63,7 @@ public abstract class BigConnectRabbitMqSource extends BasePushSource {
         }
 
         try {
-            queueNames = new WorkQueueNames(bigConnect.getConfiguration());
-            workerSpout = new RabbitMQWorkQueueSpout(queueNames.getDataWorkerQueueName());
+            workerSpout = new RabbitMQWorkQueueSpout(bigConnect.getConfiguration().get(Configuration.DW_EXTERNAL_QUEUE_NAME, WorkQueueRepository.DW_DEFAULT_EXTERNAL_QUEUE_NAME));
             workerSpout.setConfiguration(bigConnect.getConfiguration());
             workerSpout.open();
         } catch(Exception e) {
@@ -233,8 +232,11 @@ public abstract class BigConnectRabbitMqSource extends BasePushSource {
             t.interrupt();
         }
 
-        workerSpout.close();
-        bigConnect.shutDown();
+        if (workerSpout != null)
+            workerSpout.close();
+
+        if (bigConnect != null)
+            bigConnect.shutDown();
     }
 
     private static class WorkerItemWrapper {
