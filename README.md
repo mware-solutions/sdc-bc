@@ -1,2 +1,2 @@
 # sdc-bc
-StreamSets - BigConnect integration
+StreamSets - BigConnect integration plugins

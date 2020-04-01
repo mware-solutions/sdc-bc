@@ -27,6 +27,7 @@
     <junit.version>4.12</junit.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <bc.version>4.1.0-SNAPSHOT</bc.version>
+    <apache.commons.version>3.9</apache.commons.version>
   </properties>
 
   <dependencies>
@@ -63,15 +64,19 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
       <version>${slf4j.version}</version>
-<!--      <scope>provided</scope>-->
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
       <version>${slf4j.version}</version>
-<!--      <scope>provided</scope>-->
     </dependency>
     <!-- end -->
+
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>${apache.commons.version}</version>
+    </dependency>
 
     <!-- Test Dependencies -->
     <dependency>
