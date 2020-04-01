@@ -4,8 +4,8 @@ import com.streamsets.pipeline.api.*;
 
 @StageDef(
         version = 1,
-        label = "BigConnect RabbitMQ Origin",
-        description = "Gets DataWorker messages from RabbitMQ queue",
+        label = "BDL DataWorker Message Origin",
+        description = "Polls BDL DataWorker messages",
         icon = "bc.png",
         execution = ExecutionMode.STANDALONE,
         recordsByRef = true,
@@ -17,8 +17,8 @@ public class BigConnectRabbitMqDSource extends BigConnectRabbitMqSource {
     @ConfigDef(
             required = true,
             type = ConfigDef.Type.STRING,
-            defaultValue = "/opt/bdl/etc/explorer",
-            label = "BigConnect Graph Engine Config Path",
+            defaultValue = "/opt/bdl/etc/sdcdw",
+            label = "Graph Engine Config Path",
             displayPosition = 0,
             group = "Connection"
     )

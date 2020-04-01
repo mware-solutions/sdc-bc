@@ -29,6 +29,8 @@ public abstract class PythonExecutorSource extends BasePushSource {
 
     public abstract int getNumberOfThreads();
 
+    public abstract String getInterpreterPath();
+
     private PythonRunnable runner;
     private String uuid;
 
@@ -37,7 +39,7 @@ public abstract class PythonExecutorSource extends BasePushSource {
         // Validate configuration values and open any required resources.
         List<ConfigIssue> issues = super.init();
 
-        runner = new PythonRunnable(getScriptPath());
+        runner = new PythonRunnable(getInterpreterPath(), getScriptPath());
         runner.setParameters(getParameters());
         uuid = UUID.randomUUID().toString();
 

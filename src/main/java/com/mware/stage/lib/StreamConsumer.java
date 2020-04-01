@@ -37,7 +37,7 @@ public class StreamConsumer extends Thread {
             int idx = 0;
             StringBuffer sb = new StringBuffer();
             while (!stopped && ((line = br.readLine()) != null)) {
-                LOG.info("Process output - " + type.name() + ": " + line);
+                LOG.debug("Process output - " + type.name() + ": " + line);
                 sb.append(line);
                 sb.append("\n");
                 if (action != null && actionType == ActionType.INLINE) {

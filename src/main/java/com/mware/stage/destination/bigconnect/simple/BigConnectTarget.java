@@ -149,9 +149,8 @@ public abstract class BigConnectTarget extends BaseTarget {
       PropertyMetadata propertyMetadata = new PropertyMetadata(new Date(), bigConnect.getSystemUser(), 0d, visibilityJson, visibility);
       final String vertexId = generateId(fields, getIdSeed());
 
-      ElementMutation<Vertex> vb = graph.prepareVertex(vertexId, visibility);
+      ElementMutation<Vertex> vb = graph.prepareVertex(vertexId, visibility, getConcept());
       setPropertyValue(BcSchema.VISIBILITY_JSON, vb, visibilityJson, propertyMetadata, visibility);
-      setPropertyValue(BcSchema.CONCEPT_TYPE, vb, getConcept(), propertyMetadata, visibility);
       setPropertyValue(BcSchema.MODIFIED_DATE, vb, new Date(), propertyMetadata, visibility);
       setPropertyValue(BcSchema.MODIFIED_BY, vb, bigConnect.getSystemUser().getUsername(), propertyMetadata, visibility);
 
@@ -201,7 +200,7 @@ public abstract class BigConnectTarget extends BaseTarget {
       } else {
           eb = bigConnect.getGraph().prepareEdge(otherVertexId, vertexId, getRelationshipName(), defaultVisibility);
       }
-      BcSchema.CONCEPT_TYPE.setProperty(eb, SchemaRepository.TYPE_RELATIONSHIP, defaultVisibility);
+//      BcSchema.CONCEPT_TYPE.setProperty(eb, SchemaRepository.TYPE_RELATIONSHIP, defaultVisibility);
       BcSchema.MODIFIED_DATE.setProperty(eb, new Date(), defaultVisibility);
 
       elements.add(eb);

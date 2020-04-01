@@ -17,8 +17,8 @@ public class BigConnectDataWorkerQueueDProcessor extends BigConnectDataWorkerQue
     @ConfigDef(
             required = true,
             type = ConfigDef.Type.STRING,
-            defaultValue = "/opt/bdl/etc/explorer",
-            label = "BigConnect Graph Engine Config Path",
+            defaultValue = "/opt/bdl/etc/sdcdw",
+            label = "Graph Engine Config Path",
             displayPosition = 0,
             group = "Connection"
     )

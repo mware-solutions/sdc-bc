@@ -15,7 +15,6 @@ import java.util.Map;
 )
 @ConfigGroups(value = BigConnectCypherGroups.class)
 @GenerateResourceBundle
-@PipelineLifecycleStage
 public class BigConnectCypherDTarget extends BigConnectCypherTarget {
     @ConfigDef(
             required = true,

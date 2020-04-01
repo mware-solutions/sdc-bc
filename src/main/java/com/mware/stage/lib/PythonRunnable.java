@@ -20,11 +20,13 @@ public class PythonRunnable implements Runnable, ExceptionCatcher {
     private StreamConsumer errorConsumer;
     private StreamConsumer responseConsumer;
 
+    private String interpreterPath;
     private String scriptPath;
     private List<String> parameters;
     private ResponseAction action;
 
-    public PythonRunnable(String scriptPath) {
+    public PythonRunnable(String interpreterPath, String scriptPath) {
+        this.interpreterPath = interpreterPath;
         this.scriptPath = scriptPath;
         runtime = Runtime.getRuntime();
     }
@@ -93,7 +95,8 @@ public class PythonRunnable implements Runnable, ExceptionCatcher {
             }
         }
         final String[] cmd = new String[numParams];
-        cmd[0] = "python";
+
+        cmd[0] = (!StringUtils.isEmpty(interpreterPath)) ? interpreterPath : "python";
         cmd[1] = this.scriptPath;
 
         // Add script params

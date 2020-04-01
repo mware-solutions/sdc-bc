@@ -20,13 +20,16 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TransferQueue;
 
 public abstract class BigConnectRabbitMqSource extends BasePushSource {
     private final static Logger LOGGER = LoggerFactory.getLogger(BigConnectRabbitMqSource.class);
     private BigConnectSystem bigConnect;
     private RabbitMQWorkQueueSpout workerSpout;
     private volatile boolean shouldRun;
-    private final Queue<WorkerItemWrapper> tupleQueue = new LinkedList<>();
+    private final TransferQueue<WorkerItemWrapper> tupleQueue = new LinkedTransferQueue<>();
     private List<Thread> processThreads = new ArrayList<>();
     private QueueMessageProcessor messageProcessor;
     private WorkQueueNames queueNames;
@@ -61,7 +64,7 @@ public abstract class BigConnectRabbitMqSource extends BasePushSource {
 
         try {
             queueNames = new WorkQueueNames(bigConnect.getConfiguration());
-            workerSpout = new RabbitMQWorkQueueSpout(queueNames.getDataWorkerQeueName());
+            workerSpout = new RabbitMQWorkQueueSpout(queueNames.getDataWorkerQueueName());
             workerSpout.setConfiguration(bigConnect.getConfiguration());
             workerSpout.open();
         } catch(Exception e) {
@@ -162,26 +165,17 @@ public abstract class BigConnectRabbitMqSource extends BasePushSource {
 
                     WorkerItemWrapper workerItemWrapper = null;
                     try {
-                        synchronized (tupleQueue) {
-                            do {
-                                while (shouldRun && tupleQueue.size() == 0) {
-                                    tupleQueue.wait();
-                                }
-                                if (!shouldRun) {
-                                    return;
-                                }
-                                if (tupleQueue.size() > 0) {
-                                    workerItemWrapper = tupleQueue.remove();
-                                    tupleQueue.notifyAll();
-                                }
-                            } while (shouldRun && workerItemWrapper == null);
-                        }
+                        workerItemWrapper = tupleQueue.poll(2000, TimeUnit.MILLISECONDS);
                     } catch (Exception ex) {
                         LOGGER.error("Could not get next workerItem: "+ex.getMessage());
                     }
                     if (!shouldRun) {
                         return;
                     }
+
+                    if (workerItemWrapper == null)
+                        continue;
+
                     try {
                         messageProcessor.process(workerItemWrapper.getWorkerItem());
                         workerSpout.ack(workerItemWrapper.workerTuple);
@@ -220,13 +214,9 @@ public abstract class BigConnectRabbitMqSource extends BasePushSource {
             if (workerItemWrapper == null) {
                 continue;
             }
-            synchronized (tupleQueue) {
-                tupleQueue.add(workerItemWrapper);
-                tupleQueue.notifyAll();
-                while (shouldRun && tupleQueue.size() >= getNumberOfThreads()) {
-                    tupleQueue.wait();
-                }
-            }
+
+
+            tupleQueue.transfer(workerItemWrapper);
         }
     }
 
@@ -243,6 +233,7 @@ public abstract class BigConnectRabbitMqSource extends BasePushSource {
             t.interrupt();
         }
 
+        workerSpout.close();
         bigConnect.shutDown();
     }
 

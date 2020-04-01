@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,11 +25,11 @@ public abstract class PythonExecutorProcessor extends RecordProcessor {
 
     public abstract String getParamField();
 
-    public abstract boolean isJson();
-
     public abstract String getOutputSeparator();
 
     public abstract String getTargetField();
+
+    public abstract String getInterpreterPath();
 
     private PythonRunnable runner;
     private String uuid;
@@ -41,7 +42,7 @@ public abstract class PythonExecutorProcessor extends RecordProcessor {
         // Validate configuration values and open any required resources.
         List<ConfigIssue> issues = super.init();
 
-        runner = new PythonRunnable(getScriptPath());
+        runner = new PythonRunnable(getInterpreterPath(), getScriptPath());
 
         // If issues is not empty, the UI will inform the user of each configuration issue in the list.
         return issues;
@@ -67,7 +68,7 @@ public abstract class PythonExecutorProcessor extends RecordProcessor {
         if (!StringUtils.isEmpty(getParamField()) && !record.has(getParamField())) {
             throw new OnRecordErrorException(Errors.BC_01, record, "Parameter field: " + getParamField() + " was set but not found in this record.");
         }
-        if (getContext().isPreview() || getContext().isStopped()) {
+        if (getContext().isStopped()) {
             return;
         }
 
@@ -83,16 +84,24 @@ public abstract class PythonExecutorProcessor extends RecordProcessor {
             Record record1 = null;
             if (StringUtils.isEmpty(getTargetField())) {
                 record1 = getContext().createRecord(rid);
-                record1.set(Field.create(responseLine));
+                if (StringUtils.isEmpty(getOutputSeparator())) {
+                    record1.set(Field.create(responseLine));
+                } else {
+                    record1.set(Field.createListMap(createFields(responseLine)));
+                }
             } else {
                 record1 = record;
-                record1.set(getTargetField(), Field.create(responseLine));
+                if (StringUtils.isEmpty(getOutputSeparator())) {
+                    record1.set(getTargetField(), Field.create(responseLine));
+                } else {
+                    record1.set(getTargetField(), Field.createListMap(createFields(responseLine)));
+                }
             }
 
             batchMaker.addRecord(record1, getContext().getOutputLanes().get(PythonExecutorOutputStreams.COMMIT.ordinal()));
             batchMaker.addRecord(record1, getContext().getOutputLanes().get(PythonExecutorOutputStreams.PROCESS.ordinal()));
 
-            LOG.info("Produced record with id: " + rid);
+            LOG.debug("Produced record with id: " + rid);
         });
 
         if (e instanceof StageException) {
@@ -114,4 +123,12 @@ public abstract class PythonExecutorProcessor extends RecordProcessor {
         }
     }
 
+    private LinkedHashMap<String, Field> createFields(String responseLine) {
+        LinkedHashMap<String, Field> fields = new LinkedHashMap<>();
+        String parts[] = responseLine.split(getOutputSeparator());
+        for (int i = 0; i < parts.length; i++) {
+            fields.put("field" + i, Field.create(parts[i]));
+        }
+        return fields;
+    }
 }

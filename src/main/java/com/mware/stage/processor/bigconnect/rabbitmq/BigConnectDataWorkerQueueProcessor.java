@@ -81,7 +81,7 @@ public abstract class BigConnectDataWorkerQueueProcessor extends RecordProcessor
         int priority = record.get(getMessagePriorityField()).getValueAsInteger();
 
         try {
-            workQueueRepository.pushOnQueue(queueNames.getDataWorkerQeueName(), messageData, fromRabbitMqPriority(priority));
+            workQueueRepository.pushOnQueue(queueNames.getDataWorkerQueueName(), messageData, fromRabbitMqPriority(priority));
         } catch (BcException ex) {
             ex.printStackTrace();
             throw new OnRecordErrorException(Errors.BC_01, record, "Could not send message to queue: " + ex.getMessage());

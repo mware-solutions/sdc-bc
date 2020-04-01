@@ -21,10 +21,20 @@ import java.util.List;
 public class PythonExecutorDSource extends PythonExecutorSource {
 
   @ConfigDef(
+          required = true,
+          type = ConfigDef.Type.STRING,
+          defaultValue = "python",
+          label = "Python interpreter path",
+          displayPosition = 10,
+          group = "ExecutorConfig"
+  )
+  public String interpreterPath;
+
+  @ConfigDef(
       required = true,
       type = ConfigDef.Type.STRING,
       defaultValue = "",
-      label = "Python script path",
+      label = "Script path",
       displayPosition = 10,
       group = "ExecutorConfig"
   )
@@ -34,7 +44,7 @@ public class PythonExecutorDSource extends PythonExecutorSource {
       required = false,
       type = ConfigDef.Type.LIST,
       defaultValue = "",
-      label = "Python script parameters",
+      label = "Script parameters",
       displayPosition = 20,
       group = "ExecutorConfig"
   )
@@ -97,5 +107,9 @@ public class PythonExecutorDSource extends PythonExecutorSource {
   @Override
   public int getNumberOfThreads() {
     return threadCount;
+  }
+
+  public String getInterpreterPath() {
+    return interpreterPath;
   }
 }

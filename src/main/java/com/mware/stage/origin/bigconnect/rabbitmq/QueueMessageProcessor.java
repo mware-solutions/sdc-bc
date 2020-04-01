@@ -1,7 +1,6 @@
 package com.mware.stage.origin.bigconnect.rabbitmq;
 
 import com.mware.core.ingest.dataworker.DataWorkerData;
-import com.mware.core.ingest.dataworker.DataWorkerItem;
 import com.mware.core.ingest.dataworker.DataWorkerMessage;
 import com.mware.core.ingest.dataworker.ElementOrPropertyStatus;
 import com.mware.core.model.properties.BcSchema;
@@ -315,8 +314,8 @@ public class QueueMessageProcessor {
 
         record.set(Field.create(row));
         batchContext.getBatchMaker().addRecord(record);
-        context.processBatch(batchContext);
         LOGGER.info("Produced record with id: " + rid);
+        context.processBatch(batchContext);
     }
 
     private LinkedHashMap<String, Field> createElementMap(final Element element) {
@@ -326,7 +325,17 @@ public class QueueMessageProcessor {
             if (prop.getValue() != null) {
                 LinkedHashMap<String, Field> propertyMap = new LinkedHashMap<>();
                 propertyMap.put("key", Field.create(prop.getKey()));
-                propertyMap.put("value", Field.create(prop.getValue().toString()));
+                if(prop.getValue() instanceof StreamingPropertyValue) {
+                    StreamingPropertyValue spv = (StreamingPropertyValue) prop.getValue();
+                    try {
+                        propertyMap.put("value", Field.create(IOUtils.toByteArray(spv.getInputStream())));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        continue;
+                    }
+                } else {
+                    propertyMap.put("value", Field.create(prop.getValue().toString()));
+                }
                 map.put(prop.getName(), Field.createListMap(propertyMap));
             }
         }

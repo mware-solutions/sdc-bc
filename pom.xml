@@ -26,7 +26,7 @@
     <slf4j.version>1.7.7</slf4j.version>
     <junit.version>4.12</junit.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <bc.version>4.0.0-SNAPSHOT</bc.version>
+    <bc.version>4.1.0-SNAPSHOT</bc.version>
   </properties>
 
   <dependencies>
@@ -34,11 +34,6 @@
     <dependency>
       <groupId>com.mware.bigconnect</groupId>
       <artifactId>core</artifactId>
-      <version>${bc.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.mware.bigconnect</groupId>
-      <artifactId>storage-rocksdb</artifactId>
       <version>${bc.version}</version>
     </dependency>
     <dependency>

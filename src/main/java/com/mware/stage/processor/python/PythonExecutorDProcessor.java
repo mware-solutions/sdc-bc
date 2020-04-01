@@ -22,10 +22,20 @@ public class PythonExecutorDProcessor extends PythonExecutorProcessor {
   @ConfigDef(
       required = true,
       type = ConfigDef.Type.STRING,
-      defaultValue = "",
-      label = "Python script path",
+      defaultValue = "python",
+      label = "Python interpreter path",
       displayPosition = 10,
       group = "ExecutorConfig"
+  )
+  public String interpreterPath;
+
+  @ConfigDef(
+          required = true,
+          type = ConfigDef.Type.STRING,
+          defaultValue = "",
+          label = "Script path",
+          displayPosition = 10,
+          group = "ExecutorConfig"
   )
   public String scriptPath;
 
@@ -52,7 +62,6 @@ public class PythonExecutorDProcessor extends PythonExecutorProcessor {
   @ConfigDef(
       required = false,
       type = ConfigDef.Type.STRING,
-      defaultValue = ",",
       label = "Output separator",
       description = "Output separator (only if output is not JSON)",
       dependsOn = "json",
@@ -85,11 +94,6 @@ public class PythonExecutorDProcessor extends PythonExecutorProcessor {
   }
 
   @Override
-  public boolean isJson() {
-    return json;
-  }
-
-  @Override
   public String getOutputSeparator() {
     return outputSeparator;
   }
@@ -97,5 +101,9 @@ public class PythonExecutorDProcessor extends PythonExecutorProcessor {
   @Override
   public String getTargetField() {
     return targetField;
+  }
+
+  public String getInterpreterPath() {
+    return interpreterPath;
   }
 }
