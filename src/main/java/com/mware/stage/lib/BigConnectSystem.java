@@ -33,7 +33,6 @@ public class BigConnectSystem {
     private SchemaRepository ontologyRepository;
     private WorkQueueRepository workQueueRepository;
     private User user;
-    private LockRepository lockRepository;
     private UserRepository userRepository;
     private AuthorizationRepository authorizationRepository;
     private SimpleOrmSession simpleOrmSession;
@@ -76,6 +75,13 @@ public class BigConnectSystem {
         return configuration;
     }
 
+    public static Configuration getStaticConfiguration(String configDir) throws Exception {
+        Map config = ConfigurationUtils.loadConfig(Collections.singletonList(
+                configDir + File.separator + "bc.properties"
+        ), "");
+        return ConfigurationLoader.load(HashMapConfigurationLoader.class, config);
+    }
+
     public Configuration getConfiguration() {
         return configuration;
     }
@@ -96,12 +102,6 @@ public class BigConnectSystem {
             this.user = userRepository.getSystemUser();
         }
         return this.user;
-    }
-
-
-    @Inject
-    public void setLockRepository(LockRepository lockRepository) {
-        this.lockRepository = lockRepository;
     }
 
     @Inject

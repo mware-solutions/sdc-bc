@@ -1,4 +1,4 @@
-package com.mware.stage.origin.bigconnect.rabbitmq;
+package com.mware.stage.origin.bigconnect.dataworker.dwsource;
 
 import com.mware.core.ingest.dataworker.DataWorkerData;
 import com.mware.core.ingest.dataworker.DataWorkerMessage;
@@ -10,10 +10,10 @@ import com.mware.ge.Property;
 import com.mware.ge.Vertex;
 import com.mware.ge.property.StreamingPropertyValue;
 import com.mware.stage.lib.BigConnectSystem;
-import com.streamsets.pipeline.api.BatchContext;
+import com.mware.stage.origin.bigconnect.dataworker.common.SdcDataWorkerItem;
 import com.streamsets.pipeline.api.Field;
-import com.streamsets.pipeline.api.PushSource;
 import com.streamsets.pipeline.api.Record;
+import com.streamsets.pipeline.api.Source;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -21,48 +21,42 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
-import static com.mware.stage.origin.bigconnect.rabbitmq.SdcDataWorkerItem.toRabbitMQPriority;
 
-public class QueueMessageProcessor {
-    private final static Logger LOGGER = LoggerFactory.getLogger(QueueMessageProcessor.class);
-    private BigConnectSystem bigConnectSystem;
-    private PushSource.Context context;
+public class MessageProcessor {
+    private final static Logger LOGGER = LoggerFactory.getLogger(MessageProcessor.class);
 
-    public QueueMessageProcessor(BigConnectSystem bigConnectSystem, PushSource.Context context) {
+    private final BigConnectSystem bigConnectSystem;
+    private final Source.Context context;
+
+    public MessageProcessor(BigConnectSystem bigConnectSystem, Source.Context context) {
         this.bigConnectSystem = bigConnectSystem;
         this.context = context;
     }
 
-    public void process(SdcDataWorkerItem workerItem) throws Exception {
+    public List<Record> process(SdcDataWorkerItem workerItem) throws Exception {
         DataWorkerMessage message = workerItem.getMessage();
         if (message.getProperties() != null && message.getProperties().length > 0) {
-            safeExecuteHandlePropertiesOnElements(workerItem);
+            return safeExecuteHandlePropertiesOnElements(workerItem);
         } else if (message.getPropertyName() != null) {
-            safeExecuteHandlePropertyOnElements(workerItem);
+            return safeExecuteHandlePropertyOnElements(workerItem);
         } else {
-            safeExecuteHandleAllEntireElements(workerItem);
+            return safeExecuteHandleAllEntireElements(workerItem);
         }
     }
 
-    private void safeExecuteHandleAllEntireElements(SdcDataWorkerItem workerItem) throws Exception {
+    private List<Record> safeExecuteHandleAllEntireElements(SdcDataWorkerItem workerItem) throws Exception {
+        List<Record> records = new ArrayList<>();
         for (Element element : workerItem.getElements()) {
-            safeExecuteHandleEntireElement(element, workerItem.getMessage(), workerItem);
+            records.addAll(safeExecuteHandleEntireElement(element, workerItem.getMessage(), workerItem));
         }
+
+        return records;
     }
 
-    private void safeExecuteHandleEntireElement(Element element, DataWorkerMessage message, SdcDataWorkerItem workerItem) throws Exception {
-        safeExecuteHandlePropertyOnElement(element, null, message, workerItem);
-        for (Property property : element.getProperties()) {
-            safeExecuteHandlePropertyOnElement(element, property, message, workerItem);
-        }
-    }
-
-    private void safeExecuteHandlePropertiesOnElements(SdcDataWorkerItem workerItem) throws Exception {
+    private List<Record> safeExecuteHandlePropertiesOnElements(SdcDataWorkerItem workerItem) throws Exception {
+        List<Record> records = new ArrayList<>();
         DataWorkerMessage message = workerItem.getMessage();
         for (Element element : workerItem.getElements()) {
             for (DataWorkerMessage.Property propertyMessage : message.getProperties()) {
@@ -80,36 +74,43 @@ public class QueueMessageProcessor {
                     if (property == null) {
                         LOGGER.error(
                                 "Could not find property [%s]:[%s] on vertex with id %s",
-                                propertyKey,
-                                propertyName,
-                                element.getId()
-                        );
+                                propertyKey, propertyName, element.getId());
                         continue;
                     }
                 }
 
-                safeExecuteHandlePropertyOnElement(
-                        element,
-                        property,
-                        message.getWorkspaceId(),
-                        message.getVisibilitySource(),
-                        message.getPriority(),
-                        message.isTraceEnabled(),
-                        propertyMessage.getStatus(),
-                        propertyMessage.getBeforeActionTimestampOrDefault(),
-                        workerItem
-                );
+                records.add(
+                        safeExecuteHandlePropertyOnElement(element, property, message.getWorkspaceId(),
+                                message.getVisibilitySource(), message.getPriority(),
+                                message.isTraceEnabled(), propertyMessage.getStatus(),
+                                propertyMessage.getBeforeActionTimestampOrDefault(),  workerItem));
             }
         }
+
+        return records;
     }
 
-    private void safeExecuteHandlePropertyOnElement(
-            Element element,
-            Property property,
-            DataWorkerMessage message,
-            SdcDataWorkerItem workerItem
-    ) throws Exception {
-        safeExecuteHandlePropertyOnElement(
+    private List<Record> safeExecuteHandlePropertyOnElements(SdcDataWorkerItem workerItem) throws Exception {
+        List<Record> records = new ArrayList<>();
+        DataWorkerMessage message = workerItem.getMessage();
+        for (Element element : workerItem.getElements()) {
+            Property property = getProperty(element, message);
+
+            if (property != null) {
+                records.add(safeExecuteHandlePropertyOnElement(element, property, message, workerItem));
+            } else {
+                LOGGER.error(
+                        "Could not find property [%s]:[%s] on vertex with id %s",
+                        message.getPropertyKey(), message.getPropertyName(), element.getId());
+            }
+        }
+
+        return records;
+    }
+
+    private Record safeExecuteHandlePropertyOnElement(Element element, Property property, DataWorkerMessage message,
+                                                      SdcDataWorkerItem workerItem) throws Exception {
+        return safeExecuteHandlePropertyOnElement(
                 element,
                 property,
                 message.getWorkspaceId(),
@@ -118,53 +119,10 @@ public class QueueMessageProcessor {
                 message.isTraceEnabled(),
                 message.getStatus(),
                 message.getBeforeActionTimestampOrDefault(),
-                workerItem
-        );
+                workerItem);
     }
 
-    private void safeExecuteHandlePropertyOnElements(SdcDataWorkerItem workerItem) throws Exception {
-        DataWorkerMessage message = workerItem.getMessage();
-        for (Element element : workerItem.getElements()) {
-            Property property = getProperty(element, message);
-
-            if (property != null) {
-                safeExecuteHandlePropertyOnElement(element, property, message, workerItem);
-            } else {
-                LOGGER.error(
-                        "Could not find property [%s]:[%s] on vertex with id %s",
-                        message.getPropertyKey(),
-                        message.getPropertyName(),
-                        element.getId()
-                );
-            }
-        }
-    }
-
-    private Property getProperty(Element element, DataWorkerMessage message) {
-        if (message.getPropertyName() == null) {
-            return null;
-        }
-
-        Iterable<Property> properties;
-
-        if (message.getPropertyKey() == null) {
-            properties = element.getProperties(message.getPropertyName());
-        } else {
-            properties = element.getProperties(message.getPropertyKey(), message.getPropertyName());
-        }
-
-        Property result = null;
-        for (Property property : properties) {
-            if (message.getWorkspaceId() != null && property.getVisibility().hasAuthorization(message.getWorkspaceId())) {
-                result = property;
-            } else if (result == null) {
-                result = property;
-            }
-        }
-        return result;
-    }
-
-    private void safeExecuteHandlePropertyOnElement(
+    private Record safeExecuteHandlePropertyOnElement(
             Element element,
             Property property,
             String workspaceId,
@@ -173,19 +131,14 @@ public class QueueMessageProcessor {
             boolean traceEnabled,
             ElementOrPropertyStatus status,
             long beforeActionTimestamp,
-            SdcDataWorkerItem workerItem
-    ) throws Exception {
+            SdcDataWorkerItem workerItem) throws Exception {
         String propertyText = getPropertyText(property);
         boolean workerInterested = isWorkerInterested(element, property, status);
         if (!workerInterested) {
             LOGGER.debug(
                     "We are not interested in %s %s property %s (%s)",
-                    element instanceof Vertex ? "vertex" : "edge",
-                    element.getId(),
-                    propertyText,
-                    status
-            );
-            return;
+                    element instanceof Vertex ? "vertex" : "edge", element.getId(), propertyText, status);
+            return null;
         }
 
         DataWorkerData workData = new DataWorkerData(
@@ -203,31 +156,39 @@ public class QueueMessageProcessor {
         LOGGER.debug("Begin work on element %s property %s", element.getId(), propertyText);
         if (property != null && property.getValue() instanceof StreamingPropertyValue) {
             StreamingPropertyValue spb = (StreamingPropertyValue) property.getValue();
-            safeExecuteStreamingPropertyValue(workData, spb, workerItem);
+            return safeExecuteStreamingPropertyValue(workData, spb, workerItem);
         } else {
-            safeExecuteNonStreamingProperty(workData, workerItem);
+            return safeExecuteNonStreamingProperty(workData, workerItem);
         }
     }
 
-    private String getPropertyText(Property property) {
-        return property == null ? "[none]" : (property.getKey() + ":" + property.getName());
+    private List<Record> safeExecuteHandleEntireElement(Element element,
+                                                  DataWorkerMessage message,
+                                                  SdcDataWorkerItem workerItem) throws Exception {
+        List<Record> records = new ArrayList<>();
+        records.add(safeExecuteHandlePropertyOnElement(element, null, message, workerItem));
+        for (Property property : element.getProperties()) {
+            records.add(safeExecuteHandlePropertyOnElement(element, property, message, workerItem));
+        }
+
+        return records;
     }
 
-    private void safeExecuteNonStreamingProperty(DataWorkerData workData, SdcDataWorkerItem workerItem) throws Exception {
-        produceRecord(null, workData, workerItem);
+    private Record safeExecuteNonStreamingProperty(DataWorkerData workData, SdcDataWorkerItem workerItem) {
+        return produceRecord(null, workData, workerItem);
     }
 
-    private void safeExecuteStreamingPropertyValue(
+    private Record safeExecuteStreamingPropertyValue(
             DataWorkerData workData,
             StreamingPropertyValue streamingPropertyValue,
-            SdcDataWorkerItem workerItem
-    ) throws Exception {
+            SdcDataWorkerItem workerItem) throws Exception {
         InputStream in = streamingPropertyValue.getInputStream();
         File tempFile = null;
+        Record record;
         try {
             tempFile = copyToTempFile(in, workData);
             in = new FileInputStream(tempFile);
-            produceRecord(IOUtils.toByteArray(in), workData, workerItem);
+            record = produceRecord(IOUtils.toByteArray(in), workData, workerItem);
         } finally {
             if (tempFile != null) {
                 if (!tempFile.delete()) {
@@ -236,6 +197,36 @@ public class QueueMessageProcessor {
             }
             in.close();
         }
+
+        return record;
+    }
+
+    private Property getProperty(Element element, DataWorkerMessage message) {
+        if (message.getPropertyName() == null) {
+            return null;
+        }
+
+        Iterable<Property> properties;
+        if (message.getPropertyKey() == null) {
+            properties = element.getProperties(message.getPropertyName());
+        } else {
+            properties = element.getProperties(message.getPropertyKey(), message.getPropertyName());
+        }
+
+        Property result = null;
+        for (Property property : properties) {
+            if (message.getWorkspaceId() != null && property.getVisibility().hasAuthorization(message.getWorkspaceId())) {
+                result = property;
+            } else if (result == null) {
+                result = property;
+            }
+        }
+
+        return result;
+    }
+
+    private String getPropertyText(Property property) {
+        return property == null ? "[none]" : (property.getKey() + ":" + property.getName());
     }
 
     private File copyToTempFile(InputStream in, DataWorkerData workData) throws IOException {
@@ -247,6 +238,7 @@ public class QueueMessageProcessor {
         if (fileExt == null) {
             fileExt = "data";
         }
+
         File tempFile = File.createTempFile("dataWorkerBolt", fileExt);
         workData.setLocalFile(tempFile);
         try (OutputStream tempFileOut = new FileOutputStream(tempFile)) {
@@ -255,14 +247,14 @@ public class QueueMessageProcessor {
             in.close();
 
         }
+
         return tempFile;
     }
 
     private boolean isWorkerInterested (
             Element element,
             Property property,
-            ElementOrPropertyStatus status
-    ) {
+            ElementOrPropertyStatus status) {
         if (status == ElementOrPropertyStatus.DELETION) {
             return isDeleteHandled(element, property);
         } else if (status == ElementOrPropertyStatus.HIDDEN) {
@@ -290,14 +282,13 @@ public class QueueMessageProcessor {
         return false;
     }
 
-    public void produceRecord(byte[] spv, DataWorkerData data, SdcDataWorkerItem workerItem) throws Exception {
-        BatchContext batchContext = context.startBatch();
+    public Record produceRecord(byte[] spv, DataWorkerData data, SdcDataWorkerItem workerItem) {
         final String rid = "bcc-src-" + UUID.randomUUID().toString();
         Record record = context.createRecord(rid);
         Map<String, Field> row = new HashMap<>();
 
         row.put("mOrigMessage", Field.create(workerItem.getOrigMessage()));
-        row.put("mOrigPriority", Field.create(toRabbitMQPriority(data.getPriority())));
+        row.put("mOrigPriority", Field.create(SdcDataWorkerItem.toRabbitMQPriority(data.getPriority())));
         row.put("mElementType", Field.create(data.getElement().getElementType().name()));
         if (data.getProperty() != null) {
             row.put("mPropertyKey", Field.create(data.getProperty().getKey()));
@@ -308,14 +299,13 @@ public class QueueMessageProcessor {
             row.put("mPropertyData", Field.create(spv));
         }
 
-        if(data.getElement() != null) {
+        if (data.getElement() != null) {
             row.put("element", Field.createListMap(createElementMap(data.getElement())));
         }
-
         record.set(Field.create(row));
-        batchContext.getBatchMaker().addRecord(record);
         LOGGER.info("Produced record with id: " + rid);
-        context.processBatch(batchContext);
+
+        return record;
     }
 
     private LinkedHashMap<String, Field> createElementMap(final Element element) {

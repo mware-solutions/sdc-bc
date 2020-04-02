@@ -20,7 +20,7 @@ import com.streamsets.pipeline.api.StageDef;
 public class PythonExecutorDProcessor extends PythonExecutorProcessor {
 
   @ConfigDef(
-      required = true,
+      required = false,
       type = ConfigDef.Type.STRING,
       defaultValue = "python",
       label = "Python interpreter path",
@@ -30,12 +30,12 @@ public class PythonExecutorDProcessor extends PythonExecutorProcessor {
   public String interpreterPath;
 
   @ConfigDef(
-          required = true,
-          type = ConfigDef.Type.STRING,
-          defaultValue = "",
-          label = "Script path",
-          displayPosition = 10,
-          group = "ExecutorConfig"
+      required = true,
+      type = ConfigDef.Type.STRING,
+      defaultValue = "",
+      label = "Script path",
+      displayPosition = 10,
+      group = "ExecutorConfig"
   )
   public String scriptPath;
 

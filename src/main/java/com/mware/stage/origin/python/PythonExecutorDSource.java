@@ -21,12 +21,12 @@ import java.util.List;
 public class PythonExecutorDSource extends PythonExecutorSource {
 
   @ConfigDef(
-          required = true,
-          type = ConfigDef.Type.STRING,
-          defaultValue = "python",
-          label = "Python interpreter path",
-          displayPosition = 10,
-          group = "ExecutorConfig"
+      required = false,
+      type = ConfigDef.Type.STRING,
+      defaultValue = "python",
+      label = "Python interpreter path",
+      displayPosition = 10,
+      group = "ExecutorConfig"
   )
   public String interpreterPath;
 
