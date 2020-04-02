@@ -17,6 +17,7 @@ import com.streamsets.pipeline.api.StageException;
 import com.streamsets.pipeline.api.base.BaseSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.util.Base64;
 import java.util.List;
@@ -26,7 +27,7 @@ public abstract class DataWorkerSource extends BaseSource {
 
     public abstract String getConfigPath();
 
-    private BigConnectSystem bigConnect;
+    private static BigConnectSystem bigConnect;
     private MessageProcessor messageProcessor;
 
     @Override
@@ -41,8 +42,10 @@ public abstract class DataWorkerSource extends BaseSource {
                                     "BigConnect Config path does not exist or it's not a directory."));
         }
         try {
-            bigConnect = BigConnectSystem.getInstance();
-            bigConnect.init(getConfigPath());
+            if (bigConnect == null) {
+                bigConnect = BigConnectSystem.getInstance();
+                bigConnect.init(getConfigPath());
+            }
             messageProcessor = new MessageProcessor(bigConnect, getContext());
         } catch (Exception e) {
             issues.add(
@@ -73,7 +76,7 @@ public abstract class DataWorkerSource extends BaseSource {
             }
         }
 
-        return  "N/A";
+        return null;
     }
 
     private SdcDataWorkerItem tupleDataToWorkerItem(byte[] data) {
@@ -144,8 +147,8 @@ public abstract class DataWorkerSource extends BaseSource {
 
     @Override
     public void destroy() {
-        if (bigConnect != null && bigConnect.getGraph() != null) {
-            bigConnect.shutDown();
-        }
+//        if (bigConnect != null && bigConnect.getGraph() != null) {
+//            bigConnect.shutDown();
+//        }
     }
 }

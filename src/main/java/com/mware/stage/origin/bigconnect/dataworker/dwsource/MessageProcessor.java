@@ -292,7 +292,7 @@ public class MessageProcessor {
         row.put("mElementType", Field.create(data.getElement().getElementType().name()));
         if (data.getProperty() != null) {
             row.put("mPropertyKey", Field.create(data.getProperty().getKey()));
-            row.put("mPopertyName", Field.create(data.getProperty().getName()));
+            row.put("mPropertyName", Field.create(data.getProperty().getName()));
         }
 
         if (spv != null) {
@@ -303,7 +303,7 @@ public class MessageProcessor {
             row.put("element", Field.createListMap(createElementMap(data.getElement())));
         }
         record.set(Field.create(row));
-        LOGGER.info("Produced record with id: " + rid);
+        LOGGER.debug("Produced record with id: " + rid);
 
         return record;
     }
@@ -315,7 +315,7 @@ public class MessageProcessor {
             if (prop.getValue() != null) {
                 LinkedHashMap<String, Field> propertyMap = new LinkedHashMap<>();
                 propertyMap.put("key", Field.create(prop.getKey()));
-                if(prop.getValue() instanceof StreamingPropertyValue) {
+                if (prop.getValue() instanceof StreamingPropertyValue) {
                     StreamingPropertyValue spv = (StreamingPropertyValue) prop.getValue();
                     try {
                         propertyMap.put("value", Field.create(IOUtils.toByteArray(spv.getInputStream())));
