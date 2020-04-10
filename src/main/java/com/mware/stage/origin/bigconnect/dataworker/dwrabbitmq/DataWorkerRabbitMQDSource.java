@@ -20,7 +20,7 @@ public class DataWorkerRabbitMQDSource extends DataWorkerRabbitMQSource {
     @ConfigDef(
         required = true,
         type = ConfigDef.Type.STRING,
-        defaultValue = "/opt/bdl/etc/bigconnect",
+        defaultValue = "/opt/config",
         label = "Graph Engine Config Path",
         displayPosition = 10,
         group = "Connection"

@@ -6,7 +6,6 @@ import com.mware.core.bootstrap.InjectHelper;
 import com.mware.core.config.Configuration;
 import com.mware.core.config.ConfigurationLoader;
 import com.mware.core.config.HashMapConfigurationLoader;
-import com.mware.core.model.lock.LockRepository;
 import com.mware.core.model.role.AuthorizationRepository;
 import com.mware.core.model.schema.Schema;
 import com.mware.core.model.schema.SchemaRepository;
@@ -98,7 +97,7 @@ public class BigConnectSystem {
     }
 
     public User getSystemUser() {
-        if (this.user == null) {
+        if (this.user == null && this.userRepository != null) {
             this.user = userRepository.getSystemUser();
         }
         return this.user;

@@ -114,7 +114,7 @@ public abstract class DataWorkerSource extends BaseSource {
             if (doesExist(vertex)) {
                 vertices.add(vertex);
             } else {
-                LOGGER.warn("Could not find vertex with id %s", vertexId);
+                LOGGER.warn("Could not find vertex with id: " + vertexId);
             }
         }
         return vertices.build();
@@ -135,7 +135,7 @@ public abstract class DataWorkerSource extends BaseSource {
             if (doesExist(edge)) {
                 edges.add(edge);
             } else {
-                LOGGER.warn("Could not find edge with id %s", edgeId);
+                LOGGER.warn("Could not find edge with id: " + edgeId);
             }
         }
         return edges.build();
@@ -147,6 +147,9 @@ public abstract class DataWorkerSource extends BaseSource {
 
     @Override
     public void destroy() {
+        /**
+         * bigConnect is cached and lives as long as SDC lives. Uncomment this if caching is removed
+         */
 //        if (bigConnect != null && bigConnect.getGraph() != null) {
 //            bigConnect.shutDown();
 //        }
