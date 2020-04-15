@@ -5,9 +5,7 @@ import com.mware.core.ingest.dataworker.DataWorkerMessage;
 import com.mware.core.ingest.dataworker.ElementOrPropertyStatus;
 import com.mware.core.model.properties.BcSchema;
 import com.mware.core.model.workQueue.Priority;
-import com.mware.ge.Element;
-import com.mware.ge.Property;
-import com.mware.ge.Vertex;
+import com.mware.ge.*;
 import com.mware.ge.property.StreamingPropertyValue;
 import com.mware.stage.lib.BigConnectSystem;
 import com.mware.stage.origin.bigconnect.dataworker.common.SdcDataWorkerItem;
@@ -96,13 +94,59 @@ public class MessageProcessor {
         for (Element element : workerItem.getElements()) {
             Property property = getProperty(element, message);
 
-            if (property != null) {
-                records.add(safeExecuteHandlePropertyOnElement(element, property, message, workerItem));
-            } else {
-                LOGGER.error(
+            if (property == null) {
+                // Could be property from another element
+                LOGGER.debug(
                         "Could not find property [%s]:[%s] on vertex with id %s",
                         message.getPropertyKey(), message.getPropertyName(), element.getId());
+                property = new Property() {
+                    @Override
+                    public String getKey() {
+                        return message.getPropertyKey();
+                    }
+
+                    @Override
+                    public String getName() {
+                        return message.getPropertyName();
+                    }
+
+                    @Override
+                    public Object getValue() {
+                        return null;
+                    }
+
+                    @Override
+                    public Long getTimestamp() {
+                        return null;
+                    }
+
+                    @Override
+                    public Visibility getVisibility() {
+                        return null;
+                    }
+
+                    @Override
+                    public Metadata getMetadata() {
+                        return null;
+                    }
+
+                    @Override
+                    public FetchHints getFetchHints() {
+                        return null;
+                    }
+
+                    @Override
+                    public Iterable<Visibility> getHiddenVisibilities() {
+                        return null;
+                    }
+
+                    @Override
+                    public boolean isHidden(Authorizations authorizations) {
+                        return false;
+                    }
+                };
             }
+            records.add(safeExecuteHandlePropertyOnElement(element, property, message, workerItem));
         }
 
         return records;
@@ -215,7 +259,8 @@ public class MessageProcessor {
 
         Property result = null;
         for (Property property : properties) {
-            if (message.getWorkspaceId() != null && property.getVisibility().hasAuthorization(message.getWorkspaceId())) {
+            if (message.getWorkspaceId() != null &&
+                    property.getVisibility().hasAuthorization(message.getWorkspaceId())) {
                 result = property;
             } else if (result == null) {
                 result = property;
