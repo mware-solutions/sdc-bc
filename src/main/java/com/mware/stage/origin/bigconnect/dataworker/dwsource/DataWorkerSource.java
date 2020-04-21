@@ -45,6 +45,9 @@ public abstract class DataWorkerSource extends BaseSource {
             if (bigConnect == null) {
                 bigConnect = BigConnectSystem.getInstance();
                 bigConnect.init(getConfigPath());
+                if (bigConnect.getUserRepository() == null) {
+                    bigConnect.init(getConfigPath());
+                }
             }
             messageProcessor = new MessageProcessor(bigConnect, getContext());
         } catch (Exception e) {
@@ -68,7 +71,7 @@ public abstract class DataWorkerSource extends BaseSource {
         try {
             records = messageProcessor.process(tupleDataToWorkerItem(workMessage));
         } catch (Exception e) {
-            LOGGER.error("Couldn't produce record from work message", e);
+            LOGGER.trace("Couldn't produce record from work message", e.getMessage());
         }
         if (records != null) {
             for (Record record : records) {
