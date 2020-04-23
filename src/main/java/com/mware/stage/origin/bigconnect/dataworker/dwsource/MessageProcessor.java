@@ -335,6 +335,9 @@ public class MessageProcessor {
         row.put("mOrigMessage", Field.create(workerItem.getOrigMessage()));
         row.put("mOrigPriority", Field.create(SdcDataWorkerItem.toRabbitMQPriority(data.getPriority())));
         row.put("mElementType", Field.create(data.getElement().getElementType().name()));
+        row.put("mConceptType", Field.create(
+                data.getElement() instanceof Vertex ? ((Vertex)data.getElement()).getConceptType() : ""
+        ));
         if (data.getProperty() != null) {
             row.put("mPropertyKey", Field.create(data.getProperty().getKey()));
             row.put("mPropertyName", Field.create(data.getProperty().getName()));
