@@ -28,6 +28,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <bc.version>4.1.0-SNAPSHOT</bc.version>
     <apache.commons.version>3.9</apache.commons.version>
+    <pipeline-controller.version>0.0.1</pipeline-controller.version>
   </properties>
 
   <dependencies>
@@ -51,6 +52,12 @@
       <groupId>com.mware.bigconnect</groupId>
       <artifactId>cypher-java-driver</artifactId>
       <version>${bc.version}</version>
+    </dependency>
+    <!--Pipeline control SDK-->
+    <dependency>
+      <groupId>com.mware.bigconnect.pipeline</groupId>
+      <artifactId>pipeline-controller-sdk</artifactId>
+      <version>${pipeline-controller.version}</version>
     </dependency>
 
     <!-- Core StreamSets Dependencies for Stage Libraries -->

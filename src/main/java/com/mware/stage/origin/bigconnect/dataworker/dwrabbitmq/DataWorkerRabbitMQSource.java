@@ -1,6 +1,9 @@
 package com.mware.stage.origin.bigconnect.dataworker.dwrabbitmq;
 
 import com.google.gson.Gson;
+import com.mware.bigconnect.pipeline.sdk.ControllerFactory;
+import com.mware.bigconnect.pipeline.sdk.config.Config;
+import com.mware.bigconnect.pipeline.sdk.exception.ControlException;
 import com.mware.core.config.Configuration;
 import com.mware.core.ingest.WorkerTuple;
 import com.mware.core.model.workQueue.RabbitMQWorkQueueSpout;
@@ -29,11 +32,12 @@ import org.apache.http.ssl.SSLContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.LinkedTransferQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TransferQueue;
+import java.util.concurrent.*;
 
 import static com.mware.core.model.workQueue.WorkQueueRepository.DW_DEFAULT_EXTERNAL_QUEUE_NAME;
 
@@ -44,10 +48,19 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
     private final TransferQueue<WorkerTuple> tupleQueue = new LinkedTransferQueue<>();
 
     private List<Thread> processThreads = new ArrayList<>();
+    private ExecutorService executor;
+    private File pipelineFile;
+    private Config pipelineControlConfig;
+    private List<String> cachedPipelineList;
     private volatile boolean shouldRun;
 
     public abstract String getConfigPath();
     public abstract List<String> getPipelines();
+    public abstract boolean isFromFile();
+    public abstract String getPipelineFilePath();
+    public abstract boolean isRestApi();
+    public abstract String getPcConfigPath();
+    public abstract int getPipelineThreads();
 
     @Override
     protected List<ConfigIssue> init() {
@@ -74,6 +87,29 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
                             "Could not connect to RabbitMQ: " + e.getMessage()));
             LOGGER.error("", e);
         }
+
+        if (isFromFile()) {
+            pipelineFile = new File(getPipelineFilePath());
+            if (!pipelineFile.exists()) {
+                issues.add(
+                        getContext().createConfigIssue(
+                                Groups.Connection.name(), "config", Errors.BC_00, "" +
+                                        "Pipeline list file path is invalid."));
+            }
+        }
+        if (!isRestApi()) {
+            File pipelineControlConfigFile = new File(getPcConfigPath());
+            if (!pipelineControlConfigFile.exists()) {
+                issues.add(
+                        getContext().createConfigIssue(
+                                Groups.Connection.name(), "config", Errors.BC_00, "" +
+                                        "Pipeline control config file path is invalid."));
+            } else {
+                pipelineControlConfig = new Config(getPcConfigPath());
+            }
+        }
+
+        executor = Executors.newFixedThreadPool(getPipelineThreads() > 0 ? getPipelineThreads() : Integer.MAX_VALUE);
         shouldRun = true;
 
         return issues;
@@ -101,7 +137,7 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
                     try {
                         workerTuple = tupleQueue.poll(2000, TimeUnit.MILLISECONDS);
                     } catch (Exception ex) {
-                        LOGGER.error("Could not get next workerItem: "+ex.getMessage());
+                        LOGGER.error("Could not get next workerItem: " + ex.getMessage());
                     }
 
                     if (!shouldRun) {
@@ -113,7 +149,7 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
 
                     try {
                         int failures = 0;
-                        for (String pipeline : getPipelines()) {
+                        for (String pipeline : getPipelineList()) {
                             try {
                                 runDWPipeline(pipeline, workerTuple.getData());
                             } catch (Exception e) {
@@ -135,15 +171,53 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
         }
     }
 
+    private List<String> getPipelineList() {
+        if (cachedPipelineList != null) {
+            return cachedPipelineList;
+        }
+
+        if (!isFromFile()) {
+            cachedPipelineList = getPipelines();
+        } else {
+            cachedPipelineList = new ArrayList<>();
+            try (BufferedReader reader = new BufferedReader(new FileReader(pipelineFile))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    cachedPipelineList.add(line);
+                }
+            } catch(IOException e) {
+                LOGGER.trace(e.getMessage());
+            }
+        }
+
+        return cachedPipelineList;
+    }
+
     private void runDWPipeline(String pipelineName, byte[] data) throws Exception {
-        // TODO - This should be implemented using pipeline control SDK instead (once server db is used)
-        final String apiUrl =
-                getContext().getConfiguration().get("pipeline.control.url", "")
-                        + "/high-level/run-pipeline";
         Map<String, Object> parameters = new HashMap<>();
         parameters.put(SdcDataWorkerItem.WORK_PIPELINE_PARAM, Base64.getEncoder().encodeToString(data));
-        ApiRequest req = new ApiRequest(pipelineName, new Gson().toJson(parameters));
-        sendPost(apiUrl, new Gson().toJson(req));
+
+        if (isRestApi()) {
+            final String apiUrl =
+                    getContext().getConfiguration().get("pipeline.control.url", "")
+                            + "/high-level/run-pipeline";
+            ApiRequest req = new ApiRequest(pipelineName, new Gson().toJson(parameters));
+            sendPost(apiUrl, new Gson().toJson(req));
+        } else {
+            executor.submit(() -> {
+                try {
+                    ControllerFactory.getInstance(pipelineControlConfig)
+                            .getHighLevelController()
+                            .runPipeline(pipelineName, parameters, getPipelineThreads() > 0,
+                                    false, null, null,
+                                    (info) -> {},
+                                    (timedOut, stats) ->
+                                            LOGGER.trace("Finished. TimedOut: " + timedOut + ". Stats: " + stats));
+                } catch (ControlException e) {
+                    LOGGER.warn("Pipeline execution failed with exception: ", e);
+                }
+            });
+        }
     }
 
     private void sendPost(String url, String body) throws Exception {
@@ -207,5 +281,9 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
             t.interrupt();
         }
         workerSpout.close();
+        tupleQueue.clear();
+        if (executor != null) {
+            executor.shutdownNow();
+        }
     }
 }
