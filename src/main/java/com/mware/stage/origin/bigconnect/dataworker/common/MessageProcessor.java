@@ -1,5 +1,6 @@
-package com.mware.stage.origin.bigconnect.dataworker.dwsource;
+package com.mware.stage.origin.bigconnect.dataworker.common;
 
+import com.google.common.collect.ImmutableList;
 import com.mware.core.ingest.dataworker.DataWorkerData;
 import com.mware.core.ingest.dataworker.DataWorkerMessage;
 import com.mware.core.ingest.dataworker.ElementOrPropertyStatus;
@@ -8,10 +9,9 @@ import com.mware.core.model.workQueue.Priority;
 import com.mware.ge.*;
 import com.mware.ge.property.StreamingPropertyValue;
 import com.mware.stage.lib.BigConnectSystem;
-import com.mware.stage.origin.bigconnect.dataworker.common.SdcDataWorkerItem;
 import com.streamsets.pipeline.api.Field;
+import com.streamsets.pipeline.api.ProtoSource;
 import com.streamsets.pipeline.api.Record;
-import com.streamsets.pipeline.api.Source;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -26,14 +26,82 @@ public class MessageProcessor {
     private final static Logger LOGGER = LoggerFactory.getLogger(MessageProcessor.class);
 
     private final BigConnectSystem bigConnectSystem;
-    private final Source.Context context;
+    private final ProtoSource.Context context;
 
-    public MessageProcessor(BigConnectSystem bigConnectSystem, Source.Context context) {
+    public MessageProcessor(BigConnectSystem bigConnectSystem, ProtoSource.Context context) {
         this.bigConnectSystem = bigConnectSystem;
         this.context = context;
     }
 
-    public List<Record> process(SdcDataWorkerItem workerItem) throws Exception {
+    private SdcDataWorkerItem tupleDataToWorkerItem(byte[] data) {
+        DataWorkerMessage message = DataWorkerMessage.create(data);
+        return new SdcDataWorkerItem(message, getElements(message), data);
+    }
+
+    private ImmutableList<Element> getElements(DataWorkerMessage message) {
+        ImmutableList.Builder<Element> results = ImmutableList.builder();
+        if (message.getGraphVertexId() != null && message.getGraphVertexId().length > 0) {
+            results.addAll(getVerticesFromMessage(message));
+        }
+        if (message.getGraphEdgeId() != null && message.getGraphEdgeId().length > 0) {
+            results.addAll(getEdgesFromMessage(message));
+        }
+        return results.build();
+    }
+
+    private ImmutableList<Element> getVerticesFromMessage(DataWorkerMessage message) {
+        ImmutableList.Builder<Element> vertices = ImmutableList.builder();
+
+        for (String vertexId : message.getGraphVertexId()) {
+            Vertex vertex;
+            if (message.getStatus() == ElementOrPropertyStatus.DELETION ||
+                    message.getStatus() == ElementOrPropertyStatus.HIDDEN) {
+                vertex = bigConnectSystem.getGraph().getVertex(
+                        vertexId,
+                        FetchHints.ALL,
+                        message.getBeforeActionTimestamp(),
+                        bigConnectSystem.getAuthorizations()
+                );
+            } else {
+                vertex = bigConnectSystem.getGraph().getVertex(vertexId, FetchHints.ALL, bigConnectSystem.getAuthorizations());
+            }
+            if (doesExist(vertex)) {
+                vertices.add(vertex);
+            } else {
+                LOGGER.warn("Could not find vertex with id: " + vertexId);
+            }
+        }
+        return vertices.build();
+    }
+
+    private ImmutableList<Element> getEdgesFromMessage(DataWorkerMessage message) {
+        ImmutableList.Builder<Element> edges = ImmutableList.builder();
+
+        for (String edgeId : message.getGraphEdgeId()) {
+            Edge edge;
+            if (message.getStatus() == ElementOrPropertyStatus.DELETION ||
+                    message.getStatus() == ElementOrPropertyStatus.HIDDEN) {
+                edge = bigConnectSystem.getGraph().getEdge(edgeId, FetchHints.ALL,
+                        message.getBeforeActionTimestamp(), bigConnectSystem.getAuthorizations());
+            } else {
+                edge = bigConnectSystem.getGraph().getEdge(edgeId, FetchHints.ALL, bigConnectSystem.getAuthorizations());
+            }
+            if (doesExist(edge)) {
+                edges.add(edge);
+            } else {
+                LOGGER.warn("Could not find edge with id: " + edgeId);
+            }
+        }
+        return edges.build();
+    }
+
+    private boolean doesExist(Element element) {
+        return element != null;
+    }
+
+    public List<Record> process(byte[] data) throws Exception {
+        SdcDataWorkerItem workerItem = tupleDataToWorkerItem(data);
+
         DataWorkerMessage message = workerItem.getMessage();
         if (message.getProperties() != null && message.getProperties().length > 0) {
             return safeExecuteHandlePropertiesOnElements(workerItem);

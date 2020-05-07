@@ -3,6 +3,7 @@ package com.mware.stage.origin.bigconnect.dataworker.dwrabbitmq;
 import com.google.gson.Gson;
 import com.mware.bigconnect.pipeline.sdk.ControllerFactory;
 import com.mware.bigconnect.pipeline.sdk.config.Config;
+import com.mware.bigconnect.pipeline.sdk.engine.PipelineInfo;
 import com.mware.bigconnect.pipeline.sdk.exception.ControlException;
 import com.mware.core.config.Configuration;
 import com.mware.core.ingest.WorkerTuple;
@@ -10,9 +11,16 @@ import com.mware.core.model.workQueue.RabbitMQWorkQueueSpout;
 import com.mware.stage.common.error.Errors;
 import com.mware.stage.destination.bigconnect.simple.Groups;
 import com.mware.stage.lib.BigConnectSystem;
+import com.mware.stage.origin.bigconnect.dataworker.common.MessageProcessor;
 import com.mware.stage.origin.bigconnect.dataworker.common.SdcDataWorkerItem;
+import com.mware.stage.origin.bigconnect.dataworker.dwsource.DataWorkerSource;
+import com.streamsets.pipeline.api.Record;
 import com.streamsets.pipeline.api.StageException;
 import com.streamsets.pipeline.api.base.BasePushSource;
+import com.streamsets.pipeline.api.el.ELEval;
+import com.streamsets.pipeline.api.el.ELVars;
+import com.streamsets.pipeline.lib.el.ELUtils;
+import com.streamsets.pipeline.lib.el.RecordEL;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -46,6 +54,7 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
 
     private RabbitMQWorkQueueSpout workerSpout;
     private final TransferQueue<WorkerTuple> tupleQueue = new LinkedTransferQueue<>();
+    private static final Object lock = new Object();
 
     private List<Thread> processThreads = new ArrayList<>();
     private ExecutorService executor;
@@ -53,6 +62,10 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
     private Config pipelineControlConfig;
     private List<String> cachedPipelineList;
     private volatile boolean shouldRun;
+
+    private MessageProcessor messageProcessor;
+    private ELEval evaluator;
+    private ELVars variables;
 
     public abstract String getConfigPath();
     public abstract List<String> getPipelines();
@@ -111,6 +124,30 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
 
         executor = Executors.newFixedThreadPool(getPipelineThreads() > 0 ? getPipelineThreads() : Integer.MAX_VALUE);
         shouldRun = true;
+
+        evaluator = getContext().createELEval("lanePredicates", RecordEL.class);
+        variables = ELUtils.parseConstants(null,
+                getContext(), "Conditions", "constants", Errors.BC_00, issues);
+        RecordEL.setRecordInContext(variables, getContext().createRecord("forValidation"));
+
+        try {
+            synchronized (lock) {
+                if (DataWorkerSource.bigConnect == null ||
+                        DataWorkerSource.bigConnect.getGraph() == null ||
+                        DataWorkerSource.bigConnect.getUserRepository() == null ||
+                        DataWorkerSource.bigConnect.getAuthorizationRepository() == null) {
+                    DataWorkerSource.bigConnect = BigConnectSystem.getInstance();
+                    DataWorkerSource.bigConnect.init(getConfigPath());
+                }
+                messageProcessor = new MessageProcessor(DataWorkerSource.bigConnect, getContext());
+            }
+        } catch (Exception e) {
+            issues.add(
+                    getContext().createConfigIssue(
+                            Groups.Connection.name(), "config", Errors.BC_00,
+                            "Could not connect to BigConnect Graph Engine: " + e.getMessage()));
+            LOGGER.error("", e);
+        }
 
         return issues;
     }
@@ -194,6 +231,11 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
     }
 
     private void runDWPipeline(String pipelineName, WorkerTuple workerTuple) throws Exception {
+        if (!pipelineHandlesWork(pipelineName, workerTuple)) {
+            LOGGER.debug("Pipeline execution dropped as it doesn't handle this work: " + pipelineName);
+            return;
+        }
+
         Map<String, Object> parameters = new HashMap<>();
         parameters.put(SdcDataWorkerItem.WORK_PIPELINE_PARAM, Base64.getEncoder().encodeToString(workerTuple.getData()));
 
@@ -220,6 +262,35 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
                     e.printStackTrace();
                 }
             });
+        }
+    }
+
+    private boolean pipelineHandlesWork(String pipelineName, WorkerTuple workerTuple) {
+        try {
+            PipelineInfo pipelineInfo =
+                    ControllerFactory.getInstance(pipelineControlConfig)
+                            .getHighLevelController().getPipelineInfo(pipelineName);
+
+            String handlesExpression = pipelineInfo.getDescription();
+            List<Record> records = messageProcessor.process(workerTuple.getData());
+            if (records == null || records.isEmpty()) {
+                return false;
+            }
+
+            for (Record record: records) {
+                RecordEL.setRecordInContext(variables, record);
+                if (evaluator.eval(variables, handlesExpression, Boolean.class)) {
+                    return true;
+                }
+            }
+
+            return false;
+        } catch (ControlException e) {
+            LOGGER.warn("Could not determine info for pipeline: " + pipelineName, e);
+            return false;
+        } catch (Exception e) {
+            LOGGER.warn("Could not process work for pipeline: " + pipelineName, e);
+            return false;
         }
     }
 

@@ -14,6 +14,7 @@ import com.mware.ge.property.DefaultStreamingPropertyValue;
 import com.mware.ge.property.StreamingPropertyValue;
 import com.mware.stage.common.error.Errors;
 import com.mware.stage.lib.BigConnectSystem;
+import com.mware.stage.origin.bigconnect.dataworker.dwsource.DataWorkerSource;
 import com.streamsets.pipeline.api.Batch;
 import com.streamsets.pipeline.api.Field;
 import com.streamsets.pipeline.api.Record;
@@ -22,6 +23,8 @@ import com.streamsets.pipeline.api.base.BaseTarget;
 import com.streamsets.pipeline.api.base.OnRecordErrorException;
 import com.streamsets.pipeline.api.impl.Utils;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
@@ -35,6 +38,7 @@ import java.util.*;
  * This target is an example and does not actually write to any destination.
  */
 public abstract class BigConnectTarget extends BaseTarget {
+  private final static Logger LOGGER = LoggerFactory.getLogger(BigConnectTarget.class);
 
   public abstract String getConfigPath();
   public abstract String getFieldPath();
@@ -49,8 +53,8 @@ public abstract class BigConnectTarget extends BaseTarget {
   public abstract boolean isWorkQueue();
   public abstract Map<String, String> getMapping();
 
-  private BigConnectSystem bigConnect;
   private List<ElementMutation<? extends Element>> elements;
+  private static final Object lock = new Object();
 
   /** {@inheritDoc} */
   @Override
@@ -66,17 +70,24 @@ public abstract class BigConnectTarget extends BaseTarget {
       );
     }
 
-    bigConnect = BigConnectSystem.getInstance();
     try {
-        bigConnect.init(getConfigPath());
-    } catch(Exception e) {
+        synchronized (lock) {
+            if (DataWorkerSource.bigConnect == null ||
+                    DataWorkerSource.bigConnect.getGraph() == null ||
+                    DataWorkerSource.bigConnect.getUserRepository() == null ||
+                    DataWorkerSource.bigConnect.getAuthorizationRepository() == null) {
+                DataWorkerSource.bigConnect = BigConnectSystem.getInstance();
+                DataWorkerSource.bigConnect.init(getConfigPath());
+            }
+        }
+    } catch (Exception e) {
         issues.add(
                 getContext().createConfigIssue(
-                        Groups.Connection.name(), "config", Errors.BC_00, "Could not connect to BigConnect Graph Engine: "+e.getMessage()
-                )
-        );
-        e.printStackTrace();
+                        Groups.Connection.name(), "config", Errors.BC_00,
+                        "Could not connect to BigConnect Graph Engine: " + e.getMessage()));
+        LOGGER.error("", e);
     }
+
     elements = new ArrayList<>();
 
     return issues;
@@ -196,9 +207,11 @@ public abstract class BigConnectTarget extends BaseTarget {
 
       EdgeBuilderByVertexId eb;
       if (isRelSource()) {
-          eb = bigConnect.getGraph().prepareEdge(vertexId, otherVertexId, getRelationshipName(), defaultVisibility);
+          eb = DataWorkerSource.bigConnect.getGraph()
+                  .prepareEdge(vertexId, otherVertexId, getRelationshipName(), defaultVisibility);
       } else {
-          eb = bigConnect.getGraph().prepareEdge(otherVertexId, vertexId, getRelationshipName(), defaultVisibility);
+          eb = DataWorkerSource.bigConnect.getGraph()
+                  .prepareEdge(otherVertexId, vertexId, getRelationshipName(), defaultVisibility);
       }
 //      BcSchema.CONCEPT_TYPE.setProperty(eb, SchemaRepository.TYPE_RELATIONSHIP, defaultVisibility);
       BcSchema.MODIFIED_DATE.setProperty(eb, new Date(), defaultVisibility);
@@ -207,9 +220,10 @@ public abstract class BigConnectTarget extends BaseTarget {
   }
 
   private void saveBatch() {
-      Iterable<Element> savedElements = bigConnect.getGraph().saveElementMutations(elements, bigConnect.getAuthorizations());
+      Iterable<Element> savedElements = DataWorkerSource.bigConnect.getGraph()
+              .saveElementMutations(elements, DataWorkerSource.bigConnect.getAuthorizations());
       if (isWorkQueue()) {
-          bigConnect.getWorkQueueRepository().pushMultipleGraphPropertyQueue(
+          DataWorkerSource.bigConnect.getWorkQueueRepository().pushMultipleGraphPropertyQueue(
                   savedElements,
                   null,
                   null,
@@ -220,7 +234,7 @@ public abstract class BigConnectTarget extends BaseTarget {
                   null
           );
       }
-      bigConnect.getGraph().flush();
+      DataWorkerSource.bigConnect.getGraph().flush();
       elements.clear();
   }
 
