@@ -27,6 +27,7 @@ public abstract class DataWorkerSource extends BaseSource {
 
     public abstract String getConfigPath();
 
+    private static final Object lock = new Object();
     private static BigConnectSystem bigConnect;
     private MessageProcessor messageProcessor;
 
@@ -42,14 +43,14 @@ public abstract class DataWorkerSource extends BaseSource {
                                     "BigConnect Config path does not exist or it's not a directory."));
         }
         try {
-            if (bigConnect == null) {
-                bigConnect = BigConnectSystem.getInstance();
-                bigConnect.init(getConfigPath());
-                if (bigConnect.getUserRepository() == null) {
+            synchronized (lock) {
+                if (bigConnect == null || bigConnect.getGraph() == null ||
+                        bigConnect.getUserRepository() == null || bigConnect.getAuthorizationRepository() == null) {
+                    bigConnect = BigConnectSystem.getInstance();
                     bigConnect.init(getConfigPath());
                 }
+                messageProcessor = new MessageProcessor(bigConnect, getContext());
             }
-            messageProcessor = new MessageProcessor(bigConnect, getContext());
         } catch (Exception e) {
             issues.add(
                     getContext().createConfigIssue(
@@ -71,7 +72,7 @@ public abstract class DataWorkerSource extends BaseSource {
         try {
             records = messageProcessor.process(tupleDataToWorkerItem(workMessage));
         } catch (Exception e) {
-            LOGGER.trace("Couldn't produce record from work message", e.getMessage());
+            LOGGER.warn("Couldn't produce record from work message", e.getMessage());
         }
         if (records != null) {
             for (Record record : records) {

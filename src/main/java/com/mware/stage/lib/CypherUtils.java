@@ -29,7 +29,7 @@ public class CypherUtils {
         Driver driver = null;
         try {
             URI uri = URI.create(connectionString);
-            driver = BigConnect.driver(uri, basic(username, password), insecureConfigBuilder().build());
+            driver = BigConnect.driver(uri, basic(username, password), secureBuilder().build());//insecureConfigBuilder().build());
             driver.verifyConnectivity();
         } catch (Exception e) {
             LOG.error("Can't open connection", e);
@@ -44,6 +44,12 @@ public class CypherUtils {
         }
 
         return driver;
+    }
+
+    public static Config.ConfigBuilder secureBuilder() {
+        return Config.builder()
+                .withEncryption()
+                .withTrustStrategy(Config.TrustStrategy.trustAllCertificates());
     }
 
     public static Map<String, Object> prepareCypherParams(Record record, Map<String, String> queryParams) {

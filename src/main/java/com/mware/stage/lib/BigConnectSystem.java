@@ -86,7 +86,7 @@ public class BigConnectSystem {
     }
 
     public Authorizations getAuthorizations() {
-        if (this.authorizations == null) {
+        if (this.authorizations == null && getAuthorizationRepository() != null) {
             this.authorizations = getAuthorizationRepository().getGraphAuthorizations(getSystemUser());
         }
         return this.authorizations;

@@ -70,9 +70,9 @@ public class MessageProcessor {
                     }
 
                     if (property == null) {
-                        LOGGER.error(
-                                "Could not find property [%s]:[%s] on vertex with id %s",
-                                propertyKey, propertyName, element.getId());
+                        LOGGER.warn(
+                                "Could not find property " + propertyKey + ":" + propertyName
+                                        + " on vertex with id: " + element.getId());
                         continue;
                     }
                 }
@@ -96,9 +96,9 @@ public class MessageProcessor {
 
             if (property == null) {
                 // Could be property from another element
-                LOGGER.debug(
-                        "Could not find property [%s]:[%s] on vertex with id %s",
-                        message.getPropertyKey(), message.getPropertyName(), element.getId());
+                LOGGER.warn(
+                        "Could not find property " + message.getPropertyKey() + ":"
+                                + message.getPropertyName() + " on vertex with id: " + element.getId());
                 property = new Property() {
                     @Override
                     public String getKey() {
@@ -179,9 +179,7 @@ public class MessageProcessor {
         String propertyText = getPropertyText(property);
         boolean workerInterested = isWorkerInterested(element, property, status);
         if (!workerInterested) {
-            LOGGER.debug(
-                    "We are not interested in %s %s property %s (%s)",
-                    element instanceof Vertex ? "vertex" : "edge", element.getId(), propertyText, status);
+            LOGGER.debug("We are not interested in property: " + propertyText);
             return null;
         }
 
@@ -197,7 +195,7 @@ public class MessageProcessor {
                 status
         );
 
-        LOGGER.debug("Begin work on element %s property %s", element.getId(), propertyText);
+        LOGGER.trace("Begin work on element: " + element.getId() + ", property: " + propertyText);
         if (property != null && property.getValue() instanceof StreamingPropertyValue) {
             StreamingPropertyValue spb = (StreamingPropertyValue) property.getValue();
             return safeExecuteStreamingPropertyValue(workData, spb, workerItem);
@@ -236,7 +234,7 @@ public class MessageProcessor {
         } finally {
             if (tempFile != null) {
                 if (!tempFile.delete()) {
-                    LOGGER.warn("Could not delete temp file %s", tempFile.getAbsolutePath());
+                    LOGGER.warn("Could not delete temp file: " + tempFile.getAbsolutePath());
                 }
             }
             in.close();

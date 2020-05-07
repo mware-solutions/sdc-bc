@@ -42,6 +42,12 @@
       <groupId>com.mware.bigconnect</groupId>
       <artifactId>storage-accumulo</artifactId>
       <version>${bc.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-common</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.mware.bigconnect</groupId>

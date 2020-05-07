@@ -151,7 +151,7 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
                         int failures = 0;
                         for (String pipeline : getPipelineList()) {
                             try {
-                                runDWPipeline(pipeline, workerTuple.getData());
+                                runDWPipeline(pipeline, workerTuple);
                             } catch (Exception e) {
                                 LOGGER.error("", e);
                                 failures += 1;
@@ -193,9 +193,9 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
         return cachedPipelineList;
     }
 
-    private void runDWPipeline(String pipelineName, byte[] data) throws Exception {
+    private void runDWPipeline(String pipelineName, WorkerTuple workerTuple) throws Exception {
         Map<String, Object> parameters = new HashMap<>();
-        parameters.put(SdcDataWorkerItem.WORK_PIPELINE_PARAM, Base64.getEncoder().encodeToString(data));
+        parameters.put(SdcDataWorkerItem.WORK_PIPELINE_PARAM, Base64.getEncoder().encodeToString(workerTuple.getData()));
 
         if (isRestApi()) {
             final String apiUrl =
@@ -215,6 +215,9 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
                                             LOGGER.trace("Finished. TimedOut: " + timedOut + ". Stats: " + stats));
                 } catch (ControlException e) {
                     LOGGER.warn("Pipeline execution failed with exception: ", e);
+                } catch (RuntimeException e) {
+                    workerSpout.fail(workerTuple);
+                    e.printStackTrace();
                 }
             });
         }
