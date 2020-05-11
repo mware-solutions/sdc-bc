@@ -21,6 +21,7 @@ import com.streamsets.pipeline.api.el.ELEval;
 import com.streamsets.pipeline.api.el.ELVars;
 import com.streamsets.pipeline.lib.el.ELUtils;
 import com.streamsets.pipeline.lib.el.RecordEL;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -64,6 +65,7 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
     private volatile boolean shouldRun;
 
     private MessageProcessor messageProcessor;
+    private Map<String, String> pipelineHandleExpressions;
     private ELEval evaluator;
     private ELVars variables;
 
@@ -129,6 +131,7 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
         variables = ELUtils.parseConstants(null,
                 getContext(), "Conditions", "constants", Errors.BC_00, issues);
         RecordEL.setRecordInContext(variables, getContext().createRecord("forValidation"));
+        pipelineHandleExpressions = new HashMap<>();
 
         try {
             synchronized (lock) {
@@ -258,8 +261,8 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
                 } catch (ControlException e) {
                     LOGGER.warn("Pipeline execution failed with exception: ", e);
                 } catch (RuntimeException e) {
-                    workerSpout.fail(workerTuple);
                     e.printStackTrace();
+                    workerSpout.fail(workerTuple);
                 }
             });
         }
@@ -267,11 +270,22 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
 
     private boolean pipelineHandlesWork(String pipelineName, WorkerTuple workerTuple) {
         try {
-            PipelineInfo pipelineInfo =
-                    ControllerFactory.getInstance(pipelineControlConfig)
-                            .getHighLevelController().getPipelineInfo(pipelineName);
+            String handlesExpression;
+            if (pipelineHandleExpressions.containsKey(pipelineName)) {
+                handlesExpression = pipelineHandleExpressions.get(pipelineName);
+            } else {
+                PipelineInfo pipelineInfo =
+                        ControllerFactory.getInstance(pipelineControlConfig)
+                                .getHighLevelController().getPipelineInfo(pipelineName);
 
-            String handlesExpression = pipelineInfo.getDescription();
+                handlesExpression = pipelineInfo.getDescription();
+                pipelineHandleExpressions.put(pipelineName, handlesExpression);
+            }
+
+            if (StringUtils.isEmpty(handlesExpression)) {
+                return false;
+            }
+
             List<Record> records = messageProcessor.process(workerTuple.getData());
             if (records == null || records.isEmpty()) {
                 return false;
