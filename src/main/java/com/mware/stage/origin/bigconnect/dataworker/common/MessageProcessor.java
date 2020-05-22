@@ -44,9 +44,9 @@ public class MessageProcessor {
         if (message.getGraphVertexId() != null && message.getGraphVertexId().length > 0) {
             results.addAll(getVerticesFromMessage(message));
         }
-        if (message.getGraphEdgeId() != null && message.getGraphEdgeId().length > 0) {
-            results.addAll(getEdgesFromMessage(message));
-        }
+//        if (message.getGraphEdgeId() != null && message.getGraphEdgeId().length > 0) {
+//            results.addAll(getEdgesFromMessage(message));
+//        }
         return results.build();
     }
 
@@ -57,14 +57,16 @@ public class MessageProcessor {
             Vertex vertex;
             if (message.getStatus() == ElementOrPropertyStatus.DELETION ||
                     message.getStatus() == ElementOrPropertyStatus.HIDDEN) {
-                vertex = bigConnectSystem.getGraph().getVertex(
-                        vertexId,
-                        FetchHints.ALL,
-                        message.getBeforeActionTimestamp(),
-                        bigConnectSystem.getAuthorizations()
-                );
+//                vertex = bigConnectSystem.getGraph().getVertex(
+//                        vertexId,
+//                        FetchHints.ALL,
+//                        message.getBeforeActionTimestamp(),
+//                        bigConnectSystem.getAuthorizations()
+//                );
+                continue;
             } else {
-                vertex = bigConnectSystem.getGraph().getVertex(vertexId, FetchHints.ALL, bigConnectSystem.getAuthorizations());
+                vertex = bigConnectSystem.getGraph().getVertex(vertexId,
+                        FetchHints.PROPERTIES, bigConnectSystem.getAuthorizations());
             }
             if (doesExist(vertex)) {
                 vertices.add(vertex);
