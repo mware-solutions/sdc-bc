@@ -7,7 +7,8 @@ import com.mware.core.ingest.dataworker.ElementOrPropertyStatus;
 import com.mware.core.model.properties.BcSchema;
 import com.mware.core.model.workQueue.Priority;
 import com.mware.ge.*;
-import com.mware.ge.property.StreamingPropertyValue;
+import com.mware.ge.values.storable.StreamingPropertyValue;
+import com.mware.ge.values.storable.Value;
 import com.mware.stage.lib.BigConnectSystem;
 import com.streamsets.pipeline.api.Field;
 import com.streamsets.pipeline.api.ProtoSource;
@@ -179,7 +180,7 @@ public class MessageProcessor {
                     }
 
                     @Override
-                    public Object getValue() {
+                    public Value getValue() {
                         return null;
                     }
 

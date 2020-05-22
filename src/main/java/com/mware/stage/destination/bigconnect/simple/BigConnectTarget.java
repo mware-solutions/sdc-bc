@@ -10,8 +10,7 @@ import com.mware.core.model.schema.SchemaRepository;
 import com.mware.core.model.workQueue.Priority;
 import com.mware.ge.*;
 import com.mware.ge.mutation.ElementMutation;
-import com.mware.ge.property.DefaultStreamingPropertyValue;
-import com.mware.ge.property.StreamingPropertyValue;
+import com.mware.ge.values.storable.*;
 import com.mware.stage.common.error.Errors;
 import com.mware.stage.lib.BigConnectSystem;
 import com.mware.stage.origin.bigconnect.dataworker.dwsource.DataWorkerSource;
@@ -32,6 +31,8 @@ import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.*;
 
 /**
@@ -157,7 +158,7 @@ public abstract class BigConnectTarget extends BaseTarget {
       Schema ontology = bigConnect.getOntology(BigConnectSystem.extractWorkspaceId(SchemaRepository.PUBLIC));
       Visibility visibility = bigConnect.getVisibilityTranslator().getDefaultVisibility();
       VisibilityJson visibilityJson = new VisibilityJson(visibility.getVisibilityString());
-      PropertyMetadata propertyMetadata = new PropertyMetadata(new Date(), bigConnect.getSystemUser(), 0d, visibilityJson, visibility);
+      PropertyMetadata propertyMetadata = new PropertyMetadata(ZonedDateTime.now(), bigConnect.getSystemUser(), 0d, visibilityJson, visibility);
       final String vertexId = generateId(fields, getIdSeed());
 
       ElementMutation<Vertex> vb = graph.prepareVertex(vertexId, visibility, getConcept());
@@ -179,14 +180,14 @@ public abstract class BigConnectTarget extends BaseTarget {
               StreamingPropertyValue rawValue = null;
               try {
                   rawValue = new DefaultStreamingPropertyValue(
-                          new ByteArrayInputStream(str.getBytes("UTF-8")), byte[].class);
+                          new ByteArrayInputStream(str.getBytes("UTF-8")), ByteArray.class);
                   rawValue.searchIndex(false);
                   vb.addPropertyValue("", propertyName, rawValue, metadata, visibility);
               } catch (UnsupportedEncodingException e) {
                   e.printStackTrace();
               }
           } else {
-              Object value = castToBcValueType(propertyName, field.getValue(), ontology);
+              Value value = castToBcValueType(propertyName, field.getValue(), ontology);
               vb.addPropertyValue("", propertyName, value, metadata, visibility);
           }
       }
@@ -213,8 +214,7 @@ public abstract class BigConnectTarget extends BaseTarget {
           eb = DataWorkerSource.bigConnect.getGraph()
                   .prepareEdge(otherVertexId, vertexId, getRelationshipName(), defaultVisibility);
       }
-//      BcSchema.CONCEPT_TYPE.setProperty(eb, SchemaRepository.TYPE_RELATIONSHIP, defaultVisibility);
-      BcSchema.MODIFIED_DATE.setProperty(eb, new Date(), defaultVisibility);
+      BcSchema.MODIFIED_DATE.setProperty(eb, ZonedDateTime.now(), defaultVisibility);
 
       elements.add(eb);
   }
@@ -264,19 +264,21 @@ public abstract class BigConnectTarget extends BaseTarget {
     property.setProperty(m, value, metadata, vertexVisibility);
   }
 
-  private Object castToBcValueType(String propertyName, Field field, Schema ontology) {
+  private Value castToBcValueType(String propertyName, Field field, Schema ontology) {
     SchemaProperty ontologyProperty = ontology.getPropertyByName(propertyName);
     switch(ontologyProperty.getDataType()) {
-      case DATE:
-        return field.getValueAsDate();
+      case DATE: {
+          Date date = field.getValueAsDatetime();
+          return DateTimeValue.datetime(ZonedDateTime.ofInstant(date.toInstant(), ZoneOffset.UTC));
+      }
       case DOUBLE:
-        return field.getValueAsDouble();
+        return Values.doubleValue(field.getValueAsDouble());
       case INTEGER:
-        return field.getValueAsInteger();
+        return Values.intValue(field.getValueAsInteger());
       case BOOLEAN:
-        return field.getValueAsBoolean();
+        return Values.booleanValue(field.getValueAsBoolean());
       default:
-        return field.getValueAsString();
+        return Values.stringValue(field.getValueAsString());
     }
   }
 
