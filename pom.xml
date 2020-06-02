@@ -31,6 +31,17 @@
     <pipeline-controller.version>0.0.1</pipeline-controller.version>
   </properties>
 
+  <repositories>
+    <repository>
+      <id>snapshot.bigconnect.io</id>
+      <url>s3://repo.bigconnect.io/snapshot</url>
+    </repository>
+    <repository>
+      <id>release.bigconnect.io</id>
+      <url>s3://repo.bigconnect.io/release</url>
+    </repository>
+  </repositories>
+
   <dependencies>
     <!--BigConnect dependencies-->
     <dependency>
@@ -159,5 +170,13 @@
         </configuration>
       </plugin>
     </plugins>
+
+    <extensions>
+      <extension>
+        <groupId>com.github.seahen</groupId>
+        <artifactId>maven-s3-wagon</artifactId>
+        <version>1.3.0</version>
+      </extension>
+    </extensions>
   </build>
 </project>
