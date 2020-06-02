@@ -29,7 +29,7 @@ public class CypherUtils {
         Driver driver = null;
         try {
             URI uri = URI.create(connectionString);
-            driver = BigConnect.driver(uri, basic(username, password), secureBuilder().build());//insecureConfigBuilder().build());
+            driver = BigConnect.driver(uri, basic(username, password), secureBuilder().build());
             driver.verifyConnectivity();
         } catch (Exception e) {
             LOG.error("Can't open connection", e);
@@ -97,11 +97,5 @@ public class CypherUtils {
                         .withDefaultAccessMode(AccessMode.WRITE)
                         .build()
         );
-    }
-
-    private static com.mware.bigconnect.driver.Config.ConfigBuilder insecureConfigBuilder() {
-        return Config.builder()
-                .withoutEncryption()
-                .withLogging(none());
     }
 }
