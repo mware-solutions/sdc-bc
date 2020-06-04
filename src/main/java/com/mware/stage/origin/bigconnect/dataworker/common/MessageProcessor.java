@@ -441,7 +441,7 @@ public class MessageProcessor {
                         continue;
                     }
                 } else {
-                    propertyMap.put("value", Field.create(prop.getValue().toString()));
+                    propertyMap.put("value", Field.create(prop.getValue().asObjectCopy().toString()));
                 }
                 map.put(prop.getName(), Field.createListMap(propertyMap));
             }
