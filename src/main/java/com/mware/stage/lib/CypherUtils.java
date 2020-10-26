@@ -68,11 +68,16 @@ public class CypherUtils {
     }
 
     private static Object toCypherValue(Object value) {
-        if (value == null)
+        if (value == null) {
             return null;
+        }
 
         if (value instanceof Field) {
-            return ((Field)value).getValue();
+            Object result = ((Field)value).getValue();
+            if (result instanceof Field || result instanceof Map || result instanceof ArrayList) {
+                return toCypherValue(result);
+            }
+            return result;
         } else if (value instanceof Map) {
             Map<String, Object> fieldMap = Maps.newHashMap((Map<String, Object>) value);
             fieldMap.forEach((k1, v1) -> {
