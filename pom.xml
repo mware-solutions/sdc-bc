@@ -42,6 +42,17 @@
     </repository>
   </repositories>
 
+  <distributionManagement>
+    <snapshotRepository>
+      <id>repo.bigconnect.io</id>
+      <url>s3://repo.bigconnect.io/snapshot</url>
+    </snapshotRepository>
+    <repository>
+      <id>repo.bigconnect.io</id>
+      <url>s3://repo.bigconnect.io/release</url>
+    </repository>
+  </distributionManagement>
+
   <dependencies>
     <!--BigConnect dependencies-->
     <dependency>
