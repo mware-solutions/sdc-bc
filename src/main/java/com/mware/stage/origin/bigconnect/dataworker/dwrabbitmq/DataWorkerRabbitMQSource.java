@@ -48,8 +48,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
-import static com.mware.core.model.workQueue.WorkQueueRepository.DW_DEFAULT_EXTERNAL_QUEUE_NAME;
-
 public abstract class DataWorkerRabbitMQSource extends BasePushSource {
     private final static Logger LOGGER = LoggerFactory.getLogger(DataWorkerRabbitMQSource.class);
 
@@ -92,7 +90,7 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
         try {
             final Configuration config = BigConnectSystem.getStaticConfiguration(getConfigPath());
             workerSpout = new RabbitMQWorkQueueSpout(
-                    config.get(Configuration.DW_EXTERNAL_QUEUE_NAME, DW_DEFAULT_EXTERNAL_QUEUE_NAME));
+                    config.get(Configuration.DW_QUEUE_NAME, "extDataWorker"));
             workerSpout.setConfiguration(config);
             workerSpout.open();
         } catch(Exception e) {

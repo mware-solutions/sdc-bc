@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 
 import static com.mware.bigconnect.driver.AuthTokens.basic;
 import static com.mware.bigconnect.driver.Logging.none;
@@ -54,6 +55,7 @@ public class CypherUtils {
 
     public static Config.ConfigBuilder unsecureBuilder() {
         return Config.builder()
+                .withLogging(Logging.console(Level.ALL))
                 .withoutEncryption();
     }
 
