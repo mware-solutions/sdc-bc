@@ -55,7 +55,6 @@ public class CypherUtils {
 
     public static Config.ConfigBuilder unsecureBuilder() {
         return Config.builder()
-                .withLogging(Logging.console(Level.ALL))
                 .withoutEncryption();
     }
 
