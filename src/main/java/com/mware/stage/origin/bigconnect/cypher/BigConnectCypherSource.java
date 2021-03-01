@@ -64,9 +64,22 @@ public abstract class BigConnectCypherSource extends BasePushSource {
       String _query = queryEval.eval(variables, getQuery(), String.class);
       LOG.trace("Executing query: {}", _query);
       Statement statement = new Statement(_query);
-      StatementResult result = session.run(statement);
+      StatementResult result = null;
+      final CypherUtils.RetryOnExceptionStrategy retry = new CypherUtils.RetryOnExceptionStrategy();
+      while (retry.shouldRetry()) {
+        try {
+          result = session.run(statement);
+          retry.finished();
+        } catch (Exception e) {
+          try {
+            retry.errorOccured();
+          } catch (Exception e1) {
+            LOG.warn("Record could not be produced: " + e1.getMessage());
+          }
+        }
+      }
 
-      while (result.hasNext()) {
+      while (result != null && result.hasNext()) {
         final Future future = executor.submit(new SDCRecordProducer(getContext(), result.next()));
         futures.add(future);
       }

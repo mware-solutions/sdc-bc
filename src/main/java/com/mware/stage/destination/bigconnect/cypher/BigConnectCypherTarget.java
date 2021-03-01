@@ -65,7 +65,19 @@ public abstract class BigConnectCypherTarget extends BaseExecutor {
     private void processARecord(Session session, String _query, Map<String, Object> params, Record record) throws StageException {
         LOG.trace("Executing query: {}", _query);
         Statement statement = new Statement(_query, params);
-        session.run(statement);
+        final CypherUtils.RetryOnExceptionStrategy retry = new CypherUtils.RetryOnExceptionStrategy();
+        while (retry.shouldRetry()) {
+            try {
+                session.run(statement);
+                retry.finished();
+            } catch (Exception e) {
+                try {
+                    retry.errorOccured();
+                } catch (Exception e1) {
+                    LOG.warn("Record could not be processed: " + e1.getMessage());
+                }
+            }
+        }
     }
 
     @Override

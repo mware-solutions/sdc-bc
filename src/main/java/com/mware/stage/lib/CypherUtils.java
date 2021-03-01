@@ -17,10 +17,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 
 import static com.mware.bigconnect.driver.AuthTokens.basic;
-import static com.mware.bigconnect.driver.Logging.none;
 
 public class CypherUtils {
     private static final Logger LOG = LoggerFactory.getLogger(CypherUtils.class);
@@ -31,10 +29,11 @@ public class CypherUtils {
         try {
             URI uri = URI.create(connectionString);
             driver = BigConnect.driver(uri, basic(username, password), unsecureBuilder().build());
-            RetryOnExceptionStrategy retry = new RetryOnExceptionStrategy();
+            final RetryOnExceptionStrategy retry = new RetryOnExceptionStrategy();
             while (retry.shouldRetry()) {
                 try {
                     driver.verifyConnectivity();
+                    retry.finished();
                 } catch (Exception e) {
                     retry.errorOccured();
                 }
@@ -117,7 +116,7 @@ public class CypherUtils {
         );
     }
 
-    static class RetryOnExceptionStrategy {
+    public static class RetryOnExceptionStrategy {
         public static final int DEFAULT_RETRIES = 3;
         public static final long DEFAULT_WAIT_TIME_IN_MILLI = 2000;
 
@@ -130,7 +129,7 @@ public class CypherUtils {
         }
 
         public RetryOnExceptionStrategy(int numberOfRetries,
-                                                 long timeToWait) {
+                                             long timeToWait) {
             this.numberOfRetries = numberOfRetries;
             numberOfTriesLeft = numberOfRetries;
             this.timeToWait = timeToWait;
@@ -151,6 +150,10 @@ public class CypherUtils {
             }
             numberOfTriesLeft--;
             waitUntilNextTry();
+        }
+
+        public void finished() {
+            numberOfTriesLeft = 0;
         }
 
         public long getTimeToWait() {

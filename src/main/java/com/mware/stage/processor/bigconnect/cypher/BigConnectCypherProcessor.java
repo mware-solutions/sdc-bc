@@ -1,7 +1,6 @@
 package com.mware.stage.processor.bigconnect.cypher;
 
 import com.mware.bigconnect.driver.*;
-import com.mware.bigconnect.driver.internal.InternalNode;
 import com.mware.bigconnect.driver.internal.value.*;
 import com.mware.bigconnect.driver.types.Node;
 import com.mware.bigconnect.driver.types.Relationship;
@@ -18,7 +17,10 @@ import org.slf4j.LoggerFactory;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public abstract class BigConnectCypherProcessor extends RecordProcessor {
   private static final Logger LOG = LoggerFactory.getLogger(BigConnectCypherProcessor.class);
@@ -64,10 +66,25 @@ public abstract class BigConnectCypherProcessor extends RecordProcessor {
         LOG.trace("Executing query: {}", _query);
         Statement statement = new Statement(_query,
                 CypherUtils.prepareCypherParams(record, getQueryParams()));
-        StatementResult result = session.run(statement);
+        StatementResult result = null;
+        final CypherUtils.RetryOnExceptionStrategy retry = new CypherUtils.RetryOnExceptionStrategy();
+        while (retry.shouldRetry()) {
+          try {
+            result = session.run(statement);
+            retry.finished();
+          } catch (Exception e) {
+            try {
+              retry.errorOccured();
+            } catch (Exception e1) {
+              LOG.warn("Record could not be processed: " + e1.getMessage());
+            }
+          }
+        }
 
-        record.set("/cypher", Field.create( parseCypherResult(result) ));
-        batchMaker.addRecord(record);
+        if (result != null) {
+          record.set("/cypher", Field.create( parseCypherResult(result) ));
+          batchMaker.addRecord(record);
+        }
     } catch (Exception ex) {
       ex.printStackTrace();
       throw ex;
