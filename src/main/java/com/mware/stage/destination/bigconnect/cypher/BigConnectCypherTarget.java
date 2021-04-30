@@ -37,7 +37,7 @@ public abstract class BigConnectCypherTarget extends BaseExecutor {
     }
 
     private void init(Stage.Context context, List<ConfigIssue> issues) {
-        if(issues.isEmpty()) {
+        if (issues.isEmpty()) {
             driver = CypherUtils.connect(
                     getConnectionString(), getUsername().get(), getPassword().get(), issues, context);
         }
@@ -59,6 +59,9 @@ public abstract class BigConnectCypherTarget extends BaseExecutor {
                                CypherUtils.prepareCypherParams(record, getQueryParams()),
                                record);
             }
+        } catch (Throwable t) {
+            LOG.warn("Error while processing cypher batch: " + t.getMessage());
+            t.printStackTrace();
         }
     }
 
@@ -70,7 +73,9 @@ public abstract class BigConnectCypherTarget extends BaseExecutor {
             try {
                 session.run(statement);
                 retry.finished();
+                LOG.info("Cypher statement processed.");
             } catch (Exception e) {
+                LOG.warn("Session run attempt error: " + e.getMessage());
                 try {
                     retry.errorOccured();
                 } catch (Exception e1) {

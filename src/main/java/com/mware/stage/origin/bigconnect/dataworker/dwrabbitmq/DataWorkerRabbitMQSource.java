@@ -55,7 +55,7 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
     private final TransferQueue<WorkerTuple> tupleQueue = new LinkedTransferQueue<>();
     private static final Object lock = new Object();
 
-    private List<Thread> processThreads = new ArrayList<>();
+    private final List<Thread> processThreads = new ArrayList<>();
     private ExecutorService executor;
     private File pipelineFile;
     private Config pipelineControlConfig;
@@ -187,9 +187,10 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
 
                     try {
                         int failures = 0;
+                        final List<Record> records = messageProcessor.process(workerTuple.getData());
                         for (String pipeline : getPipelineList()) {
                             try {
-                                runDWPipeline(pipeline, workerTuple);
+                                runDWPipeline(pipeline, workerTuple, records);
                             } catch (Exception e) {
                                 LOGGER.error("", e);
                                 failures += 1;
@@ -231,8 +232,8 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
         return cachedPipelineList;
     }
 
-    private void runDWPipeline(String pipelineName, WorkerTuple workerTuple) throws Exception {
-        if (!pipelineHandlesWork(pipelineName, workerTuple)) {
+    private void runDWPipeline(String pipelineName, WorkerTuple workerTuple, List<Record> records) throws Exception {
+        if (!pipelineHandlesWork(pipelineName, records)) {
             LOGGER.debug("Pipeline execution dropped as it doesn't handle this work: " + pipelineName);
             return;
         }
@@ -266,7 +267,11 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
         }
     }
 
-    private boolean pipelineHandlesWork(String pipelineName, WorkerTuple workerTuple) {
+    private boolean pipelineHandlesWork(String pipelineName, List<Record> records) {
+        if (records == null || records.isEmpty()) {
+            return false;
+        }
+
         try {
             String handlesExpression;
             if (pipelineHandleExpressions.containsKey(pipelineName)) {
@@ -281,11 +286,6 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
             }
 
             if (StringUtils.isEmpty(handlesExpression)) {
-                return false;
-            }
-
-            List<Record> records = messageProcessor.process(workerTuple.getData());
-            if (records == null || records.isEmpty()) {
                 return false;
             }
 

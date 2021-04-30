@@ -139,11 +139,13 @@ public class MessageProcessor {
                     } else {
                         property = element.getProperty(propertyKey, propertyName);
                     }
-
                     if (property == null) {
-                        LOGGER.warn(
-                                "Could not find property " + propertyKey + ":" + propertyName
-                                        + " on vertex with id: " + element.getId());
+                        if (!"conceptType".equals(propertyName)) {
+                            LOGGER.warn(
+                                    "Could not find property " + propertyKey + ":" + propertyName
+                                            + " on vertex with id: " + element.getId());
+                        }
+
                         continue;
                     }
                 }
@@ -420,7 +422,9 @@ public class MessageProcessor {
             row.put("element", Field.createListMap(createElementMap(data.getElement())));
         }
         record.set(Field.create(row));
-        LOGGER.debug("Produced record with id: " + rid);
+
+        LOGGER.debug("Produced record from queue message for concept: "
+                + row.get("mConceptType") + " and property: " + row.get("mPropertyName"));
 
         return record;
     }
