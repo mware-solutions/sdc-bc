@@ -47,6 +47,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class DataWorkerRabbitMQSource extends BasePushSource {
     private final static Logger LOGGER = LoggerFactory.getLogger(DataWorkerRabbitMQSource.class);
@@ -61,6 +62,7 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
     private Config pipelineControlConfig;
     private List<String> cachedPipelineList;
     private volatile boolean shouldRun;
+    private volatile AtomicInteger runningPipelines;
 
     private MessageProcessor messageProcessor;
     private Map<String, String> pipelineHandleExpressions;
@@ -124,6 +126,7 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
 
         executor = Executors.newFixedThreadPool(getPipelineThreads() > 0 ? getPipelineThreads() : Integer.MAX_VALUE);
         shouldRun = true;
+        runningPipelines = new AtomicInteger(0);
 
         evaluator = getContext().createELEval("lanePredicates", RecordEL.class);
         variables = ELUtils.parseConstants(null,
@@ -249,6 +252,7 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
             sendPost(apiUrl, new Gson().toJson(req));
         } else {
             executor.submit(() -> {
+                runningPipelines.incrementAndGet();
                 try {
                     ControllerFactory.getInstance(pipelineControlConfig)
                             .getHighLevelController()
@@ -262,6 +266,8 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
                 } catch (RuntimeException e) {
                     e.printStackTrace();
                     workerSpout.fail(workerTuple);
+                } finally {
+                    runningPipelines.decrementAndGet();
                 }
             });
         }
@@ -336,6 +342,10 @@ public abstract class DataWorkerRabbitMQSource extends BasePushSource {
                 shouldRun = false;
             }
 
+            if (runningPipelines.get() >= getPipelineThreads()) {
+                Thread.sleep(2 * 1000); // 2s
+                continue;
+            }
             WorkerTuple tuple = null;
             try {
                 tuple = workerSpout.nextTuple();
